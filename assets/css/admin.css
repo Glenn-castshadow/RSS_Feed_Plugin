@@ -1,0 +1,79 @@
+.wra-admin {
+	max-width: 1180px;
+}
+
+.wra-admin__grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.8fr);
+	gap: 20px;
+}
+
+.wra-panel {
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 8px;
+	margin: 20px 0;
+	padding: 20px;
+}
+
+.wra-panel h2 {
+	margin-top: 0;
+}
+
+.wra-panel label {
+	display: block;
+	font-weight: 600;
+	margin-bottom: 6px;
+}
+
+.wra-panel input[type="text"],
+.wra-panel input[type="url"],
+.wra-panel input[type="number"],
+.wra-panel input[type="date"],
+.wra-panel select,
+.wra-panel textarea {
+	box-sizing: border-box;
+	max-width: 100%;
+	width: 100%;
+}
+
+.wra-fields {
+	display: grid;
+	gap: 16px;
+	grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+.wra-checks {
+	display: grid;
+	gap: 10px;
+	grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+	margin-top: 16px;
+}
+
+.wra-checks label {
+	align-items: center;
+	display: flex;
+	font-weight: 400;
+	gap: 8px;
+}
+
+.wra-preview {
+	margin-left: 18px;
+}
+
+.wra-actions {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.wra-actions form {
+	margin: 0;
+}
+
+@media (max-width: 900px) {
+	.wra-admin__grid {
+		grid-template-columns: 1fr;
+	}
+}
