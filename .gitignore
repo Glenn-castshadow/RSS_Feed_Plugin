@@ -1,0 +1,29 @@
+# OS and editor noise
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# WordPress/local runtime artifacts
+wp-config.php
+wp-content/uploads/
+wp-content/cache/
+wp-content/upgrade/
+wp-content/debug.log
+*.log
+
+# Dependency folders
+node_modules/
+vendor/
+
+# Build output
+dist/
+release/
+*.zip
+
+# Environment files
+.env
+.env.*

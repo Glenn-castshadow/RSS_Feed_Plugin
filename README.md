@@ -24,6 +24,18 @@ A WordPress RSS aggregator plugin inspired by common RSS curation workflows: dis
 2. Activate **Curated RSS Aggregator** in WordPress.
 3. Open **RSS Aggregator** in the WordPress admin menu.
 
+## Build a Plugin Zip
+
+From this repository on Windows:
+
+```powershell
+.\scripts\build-plugin.ps1
+```
+
+The distributable zip is written to `dist/curated-rss-aggregator.zip`.
+
+Tagged GitHub releases that start with `v`, such as `v0.1.0`, automatically build and attach a plugin zip.
+
 ## Shortcode
 
 Basic usage:

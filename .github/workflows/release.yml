@@ -1,0 +1,54 @@
+name: Build Plugin Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set package metadata
+        id: meta
+        shell: bash
+        run: |
+          tag="${GITHUB_REF_NAME:-manual}"
+          version="${tag#v}"
+          echo "slug=curated-rss-aggregator" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "zip=curated-rss-aggregator-$version.zip" >> "$GITHUB_OUTPUT"
+
+      - name: Build plugin zip
+        shell: bash
+        run: |
+          mkdir -p dist/curated-rss-aggregator
+          rsync -av \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='dist' \
+            --exclude='scripts' \
+            --exclude='.gitignore' \
+            ./ dist/curated-rss-aggregator/
+          cd dist
+          zip -r "${{ steps.meta.outputs.zip }}" curated-rss-aggregator
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.meta.outputs.zip }}
+          path: dist/${{ steps.meta.outputs.zip }}
+
+      - name: Attach zip to GitHub release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/${{ steps.meta.outputs.zip }}
