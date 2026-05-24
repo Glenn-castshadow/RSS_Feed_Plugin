@@ -161,6 +161,27 @@ class WRA_Admin {
 							</p>
 						</div>
 
+						<h3><?php esc_html_e( 'AI Rewrite / Summarize', 'curated-rss-aggregator' ); ?></h3>
+						<p class="description"><?php esc_html_e( 'Configure an AI provider here; choose a mode per import job below. Leave provider blank to disable AI processing globally.', 'curated-rss-aggregator' ); ?></p>
+						<div class="wra-fields">
+							<p>
+								<label for="wra-ai-provider"><?php esc_html_e( 'Provider', 'curated-rss-aggregator' ); ?></label>
+								<select id="wra-ai-provider" name="ai_provider">
+									<option value=""><?php esc_html_e( '— Disabled —', 'curated-rss-aggregator' ); ?></option>
+									<option value="openai" <?php selected( $settings['ai_provider'], 'openai' ); ?>><?php esc_html_e( 'OpenAI', 'curated-rss-aggregator' ); ?></option>
+									<option value="openrouter" <?php selected( $settings['ai_provider'], 'openrouter' ); ?>><?php esc_html_e( 'OpenRouter', 'curated-rss-aggregator' ); ?></option>
+								</select>
+							</p>
+							<p>
+								<label for="wra-ai-key"><?php esc_html_e( 'API Key', 'curated-rss-aggregator' ); ?></label>
+								<input id="wra-ai-key" type="password" name="ai_api_key" value="" autocomplete="new-password"<?php if ( ! empty( $settings['ai_api_key'] ) ) : ?> placeholder="<?php esc_attr_e( '(saved — leave blank to keep)', 'curated-rss-aggregator' ); ?>"<?php endif; ?>>
+							</p>
+							<p>
+								<label for="wra-ai-model"><?php esc_html_e( 'Model', 'curated-rss-aggregator' ); ?></label>
+								<input id="wra-ai-model" type="text" name="ai_model" value="<?php echo esc_attr( $settings['ai_model'] ); ?>" placeholder="gpt-4o-mini">
+							</p>
+						</div>
+
 						<?php submit_button( __( 'Save Settings', 'curated-rss-aggregator' ) ); ?>
 					</form>
 				</section>
@@ -238,8 +259,25 @@ class WRA_Admin {
 					<div class="wra-checks">
 						<label><input type="checkbox" name="enabled" value="1" <?php checked( $edit_job ? $edit_job['enabled'] : true ); ?>> <?php esc_html_e( 'Run on schedule', 'curated-rss-aggregator' ); ?></label>
 						<label><input type="checkbox" name="use_full_content" value="1" <?php checked( $edit_job ? $edit_job['use_full_content'] : false ); ?>> <?php esc_html_e( 'Use full feed content when available', 'curated-rss-aggregator' ); ?></label>
+						<label><input type="checkbox" name="full_text_extraction" value="1" <?php checked( $edit_job ? ! empty( $edit_job['full_text_extraction'] ) : false ); ?>> <?php esc_html_e( 'Fetch full text from source URL (overrides feed content, slower)', 'curated-rss-aggregator' ); ?></label>
 						<label><input type="checkbox" name="save_featured_image" value="1" <?php checked( $edit_job ? $edit_job['save_featured_image'] : false ); ?>> <?php esc_html_e( 'Save extracted image as featured image', 'curated-rss-aggregator' ); ?></label>
 						<label><input type="checkbox" name="preserve_date" value="1" <?php checked( $edit_job ? $edit_job['preserve_date'] : false ); ?>> <?php esc_html_e( 'Preserve source publish date', 'curated-rss-aggregator' ); ?></label>
+					</div>
+
+					<div class="wra-fields">
+						<p>
+							<label for="wra-ai-mode"><?php esc_html_e( 'AI processing', 'curated-rss-aggregator' ); ?></label>
+							<select id="wra-ai-mode" name="ai_mode">
+								<?php $current_ai_mode = $edit_job ? ( isset( $edit_job['ai_mode'] ) ? $edit_job['ai_mode'] : 'none' ) : 'none'; ?>
+								<option value="none" <?php selected( $current_ai_mode, 'none' ); ?>><?php esc_html_e( 'None', 'curated-rss-aggregator' ); ?></option>
+								<option value="rewrite" <?php selected( $current_ai_mode, 'rewrite' ); ?>><?php esc_html_e( 'Rewrite', 'curated-rss-aggregator' ); ?></option>
+								<option value="summarize" <?php selected( $current_ai_mode, 'summarize' ); ?>><?php esc_html_e( 'Summarize', 'curated-rss-aggregator' ); ?></option>
+							</select>
+						</p>
+						<p>
+							<label for="wra-ai-prompt"><?php esc_html_e( 'Custom AI instructions', 'curated-rss-aggregator' ); ?></label>
+							<textarea id="wra-ai-prompt" name="ai_prompt" rows="2" placeholder="<?php esc_attr_e( 'Optional. E.g. Write for a tech-savvy audience.', 'curated-rss-aggregator' ); ?>"><?php echo esc_textarea( $edit_job ? ( isset( $edit_job['ai_prompt'] ) ? $edit_job['ai_prompt'] : '' ) : '' ); ?></textarea>
+						</p>
 					</div>
 
 					<?php submit_button( $edit_job ? __( 'Update Job', 'curated-rss-aggregator' ) : __( 'Create Job', 'curated-rss-aggregator' ) ); ?>
@@ -261,12 +299,18 @@ class WRA_Admin {
 	 * @return array
 	 */
 	private function sanitize_settings( $data ) {
+		$existing = WRA_Plugin::get_settings();
+		$ai_key   = isset( $data['ai_api_key'] ) ? trim( wp_unslash( $data['ai_api_key'] ) ) : '';
+
 		return array(
 			'feeds'           => isset( $data['feeds'] ) ? $this->sanitize_multiline_urls( wp_unslash( $data['feeds'] ) ) : '',
 			'cache_minutes'   => isset( $data['cache_minutes'] ) ? max( 5, absint( $data['cache_minutes'] ) ) : 60,
 			'fallback_image'  => isset( $data['fallback_image'] ) ? esc_url_raw( wp_unslash( $data['fallback_image'] ) ) : '',
 			'affiliate_name'  => isset( $data['affiliate_name'] ) ? sanitize_key( wp_unslash( $data['affiliate_name'] ) ) : '',
 			'affiliate_value' => isset( $data['affiliate_value'] ) ? sanitize_text_field( wp_unslash( $data['affiliate_value'] ) ) : '',
+			'ai_provider'     => isset( $data['ai_provider'] ) ? sanitize_key( wp_unslash( $data['ai_provider'] ) ) : '',
+			'ai_api_key'      => '' !== $ai_key ? sanitize_text_field( $ai_key ) : $existing['ai_api_key'],
+			'ai_model'        => isset( $data['ai_model'] ) ? sanitize_text_field( wp_unslash( $data['ai_model'] ) ) : '',
 		);
 	}
 
@@ -278,21 +322,27 @@ class WRA_Admin {
 	 * @return array
 	 */
 	private function sanitize_job( $data, $job_id ) {
+		$valid_ai_modes = array( 'none', 'rewrite', 'summarize' );
+		$ai_mode        = isset( $data['ai_mode'] ) ? sanitize_key( wp_unslash( $data['ai_mode'] ) ) : 'none';
+
 		return array(
-			'id'                  => $job_id,
-			'name'                => isset( $data['name'] ) ? sanitize_text_field( wp_unslash( $data['name'] ) ) : __( 'Untitled import', 'curated-rss-aggregator' ),
-			'feeds'               => isset( $data['feeds'] ) ? $this->sanitize_multiline_urls( wp_unslash( $data['feeds'] ) ) : '',
-			'limit'               => isset( $data['limit'] ) ? max( 1, min( 50, absint( $data['limit'] ) ) ) : 10,
-			'post_status'         => isset( $data['post_status'] ) ? sanitize_key( wp_unslash( $data['post_status'] ) ) : 'draft',
-			'post_type'           => isset( $data['post_type'] ) ? sanitize_key( wp_unslash( $data['post_type'] ) ) : 'post',
-			'include_keywords'    => isset( $data['include_keywords'] ) ? sanitize_text_field( wp_unslash( $data['include_keywords'] ) ) : '',
-			'exclude_keywords'    => isset( $data['exclude_keywords'] ) ? sanitize_text_field( wp_unslash( $data['exclude_keywords'] ) ) : '',
-			'date_after'          => isset( $data['date_after'] ) ? sanitize_text_field( wp_unslash( $data['date_after'] ) ) : '',
-			'date_before'         => isset( $data['date_before'] ) ? sanitize_text_field( wp_unslash( $data['date_before'] ) ) : '',
-			'enabled'             => ! empty( $data['enabled'] ),
-			'use_full_content'    => ! empty( $data['use_full_content'] ),
-			'save_featured_image' => ! empty( $data['save_featured_image'] ),
-			'preserve_date'       => ! empty( $data['preserve_date'] ),
+			'id'                   => $job_id,
+			'name'                 => isset( $data['name'] ) ? sanitize_text_field( wp_unslash( $data['name'] ) ) : __( 'Untitled import', 'curated-rss-aggregator' ),
+			'feeds'                => isset( $data['feeds'] ) ? $this->sanitize_multiline_urls( wp_unslash( $data['feeds'] ) ) : '',
+			'limit'                => isset( $data['limit'] ) ? max( 1, min( 50, absint( $data['limit'] ) ) ) : 10,
+			'post_status'          => isset( $data['post_status'] ) ? sanitize_key( wp_unslash( $data['post_status'] ) ) : 'draft',
+			'post_type'            => isset( $data['post_type'] ) ? sanitize_key( wp_unslash( $data['post_type'] ) ) : 'post',
+			'include_keywords'     => isset( $data['include_keywords'] ) ? sanitize_text_field( wp_unslash( $data['include_keywords'] ) ) : '',
+			'exclude_keywords'     => isset( $data['exclude_keywords'] ) ? sanitize_text_field( wp_unslash( $data['exclude_keywords'] ) ) : '',
+			'date_after'           => isset( $data['date_after'] ) ? sanitize_text_field( wp_unslash( $data['date_after'] ) ) : '',
+			'date_before'          => isset( $data['date_before'] ) ? sanitize_text_field( wp_unslash( $data['date_before'] ) ) : '',
+			'enabled'              => ! empty( $data['enabled'] ),
+			'use_full_content'     => ! empty( $data['use_full_content'] ),
+			'full_text_extraction' => ! empty( $data['full_text_extraction'] ),
+			'save_featured_image'  => ! empty( $data['save_featured_image'] ),
+			'preserve_date'        => ! empty( $data['preserve_date'] ),
+			'ai_mode'              => in_array( $ai_mode, $valid_ai_modes, true ) ? $ai_mode : 'none',
+			'ai_prompt'            => isset( $data['ai_prompt'] ) ? sanitize_textarea_field( wp_unslash( $data['ai_prompt'] ) ) : '',
 		);
 	}
 

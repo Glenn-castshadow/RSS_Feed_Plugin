@@ -15,19 +15,69 @@ class WRA_Plugin {
 	const CRON_HOOK       = 'wra_run_import_jobs';
 
 	/**
+	 * Shared feed fetcher instance (used by block render callback).
+	 *
+	 * @var WRA_Feed_Fetcher
+	 */
+	private static $fetcher;
+
+	/**
+	 * Shared shortcode instance (used as block render callback).
+	 *
+	 * @var WRA_Shortcode
+	 */
+	private static $shortcode;
+
+	/**
 	 * Start plugin services.
 	 */
 	public static function init() {
 		load_plugin_textdomain( 'curated-rss-aggregator', false, dirname( plugin_basename( WRA_PLUGIN_FILE ) ) . '/languages' );
 
-		$fetcher  = new WRA_Feed_Fetcher();
-		$importer = new WRA_Importer( $fetcher );
+		$settings  = self::get_settings();
+		self::$fetcher = new WRA_Feed_Fetcher();
+		$extractor    = new WRA_Full_Text_Extractor();
+		$ai_rewriter  = ! empty( $settings['ai_api_key'] ) ? new WRA_AI_Rewriter( $settings ) : null;
+		$importer     = new WRA_Importer( self::$fetcher, $extractor, $ai_rewriter );
 
-		new WRA_Shortcode( $fetcher );
-		new WRA_Admin( $fetcher, $importer );
+		self::$shortcode = new WRA_Shortcode( self::$fetcher );
+		new WRA_Admin( self::$fetcher, $importer );
 
+		add_action( 'init', array( __CLASS__, 'register_block' ) );
 		add_action( self::CRON_HOOK, array( $importer, 'run_scheduled_jobs' ) );
 		add_filter( 'cron_schedules', array( __CLASS__, 'add_cron_schedules' ) );
+	}
+
+	/**
+	 * Register the Gutenberg block type.
+	 *
+	 * Called on the 'init' hook so register_block_type() is available.
+	 */
+	public static function register_block() {
+		wp_register_script(
+			'wra-block-editor',
+			WRA_PLUGIN_URL . 'assets/js/block.js',
+			array( 'wp-blocks', 'wp-element', 'wp-block-editor', 'wp-components', 'wp-server-side-render', 'wp-i18n' ),
+			WRA_VERSION,
+			true
+		);
+
+		wp_register_style(
+			'wra-public-block',
+			WRA_PLUGIN_URL . 'assets/css/public.css',
+			array(),
+			WRA_VERSION
+		);
+
+		register_block_type(
+			WRA_PLUGIN_DIR . 'blocks/curated-rss',
+			array(
+				'editor_script'   => 'wra-block-editor',
+				'editor_style'    => 'wra-public-block',
+				'style'           => 'wra-public-block',
+				'render_callback' => array( self::$shortcode, 'render_block' ),
+			)
+		);
 	}
 
 	/**
@@ -40,11 +90,14 @@ class WRA_Plugin {
 			add_option(
 				self::SETTINGS_OPTION,
 				array(
-					'feeds'          => '',
-					'cache_minutes'  => 60,
-					'fallback_image' => '',
-					'affiliate_name' => '',
-					'affiliate_value'=> '',
+					'feeds'           => '',
+					'cache_minutes'   => 60,
+					'fallback_image'  => '',
+					'affiliate_name'  => '',
+					'affiliate_value' => '',
+					'ai_provider'     => '',
+					'ai_api_key'      => '',
+					'ai_model'        => '',
 				)
 			);
 		}
@@ -92,6 +145,9 @@ class WRA_Plugin {
 			'fallback_image'  => '',
 			'affiliate_name'  => '',
 			'affiliate_value' => '',
+			'ai_provider'     => '',
+			'ai_api_key'      => '',
+			'ai_model'        => '',
 		);
 
 		return wp_parse_args( get_option( self::SETTINGS_OPTION, array() ), $defaults );

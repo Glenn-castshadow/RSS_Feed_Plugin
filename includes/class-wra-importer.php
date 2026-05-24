@@ -18,12 +18,30 @@ class WRA_Importer {
 	private $fetcher;
 
 	/**
+	 * Full-text extractor (optional).
+	 *
+	 * @var WRA_Full_Text_Extractor|null
+	 */
+	private $extractor;
+
+	/**
+	 * AI rewriter/summarizer (optional, null when no API key is configured).
+	 *
+	 * @var WRA_AI_Rewriter|null
+	 */
+	private $ai_rewriter;
+
+	/**
 	 * Constructor.
 	 *
-	 * @param WRA_Feed_Fetcher $fetcher Feed fetcher.
+	 * @param WRA_Feed_Fetcher             $fetcher     Feed fetcher.
+	 * @param WRA_Full_Text_Extractor|null $extractor   Full-text extractor.
+	 * @param WRA_AI_Rewriter|null         $ai_rewriter AI rewriter.
 	 */
-	public function __construct( WRA_Feed_Fetcher $fetcher ) {
-		$this->fetcher = $fetcher;
+	public function __construct( WRA_Feed_Fetcher $fetcher, $extractor = null, $ai_rewriter = null ) {
+		$this->fetcher     = $fetcher;
+		$this->extractor   = $extractor;
+		$this->ai_rewriter = $ai_rewriter;
 	}
 
 	/**
@@ -41,7 +59,7 @@ class WRA_Importer {
 	 * Run a single import job.
 	 *
 	 * @param array $job Job config.
-	 * @return array
+	 * @return array { imported: int, skipped: int }
 	 */
 	public function run_job( $job ) {
 		$settings = WRA_Plugin::get_settings();
@@ -84,7 +102,7 @@ class WRA_Importer {
 	}
 
 	/**
-	 * Check duplicate imported item.
+	 * Check whether a feed item has already been imported.
 	 *
 	 * @param string $guid Source GUID.
 	 * @param string $link Source link.
@@ -115,14 +133,33 @@ class WRA_Importer {
 	}
 
 	/**
-	 * Insert feed item as a post.
+	 * Insert a feed item as a WordPress post.
 	 *
-	 * @param array $item Item.
-	 * @param array $job Job.
-	 * @return int
+	 * Content pipeline: feed content → full-text extraction (optional) → AI rewrite/summarize (optional).
+	 *
+	 * @param array $item Feed item.
+	 * @param array $job  Job config.
+	 * @return int Post ID, or 0 on failure.
 	 */
 	private function insert_item( $item, $job ) {
+		// Start with feed content.
 		$content = ! empty( $job['use_full_content'] ) ? $item['content'] : wpautop( esc_html( $item['excerpt'] ) );
+
+		// Full-text extraction fetches the source article body.
+		if ( ! empty( $job['full_text_extraction'] ) && null !== $this->extractor ) {
+			$extracted = $this->extractor->extract( $item['link'] );
+			if ( ! empty( $extracted ) ) {
+				$content = $extracted;
+			}
+		}
+
+		// AI rewrite/summarize.
+		$ai_mode = isset( $job['ai_mode'] ) ? $job['ai_mode'] : 'none';
+		if ( 'none' !== $ai_mode && null !== $this->ai_rewriter ) {
+			$ai_prompt = isset( $job['ai_prompt'] ) ? $job['ai_prompt'] : '';
+			$content   = $this->ai_rewriter->process( $content, $item['title'], $ai_mode, $ai_prompt );
+		}
+
 		$content .= sprintf(
 			'<p><a href="%s" rel="nofollow noopener" target="_blank">%s</a></p>',
 			esc_url( $item['link'] ),
@@ -161,9 +198,9 @@ class WRA_Importer {
 	}
 
 	/**
-	 * Sideload an image and set as featured image.
+	 * Sideload an image URL and set it as the post's featured image.
 	 *
-	 * @param int    $post_id Post ID.
+	 * @param int    $post_id   Post ID.
 	 * @param string $image_url Image URL.
 	 */
 	private function set_featured_image_from_url( $post_id, $image_url ) {
@@ -183,7 +220,7 @@ class WRA_Importer {
 
 		$attachment_id = media_handle_sideload( $file, $post_id );
 		if ( is_wp_error( $attachment_id ) ) {
-			@unlink( $tmp );
+			@unlink( $tmp ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
 			return;
 		}
 

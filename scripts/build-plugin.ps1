@@ -17,6 +17,7 @@ New-Item -ItemType Directory -Force -Path $packageRoot | Out-Null
 
 $items = @(
 	"assets",
+	"blocks",
 	"includes",
 	"README.md",
 	"uninstall.php",

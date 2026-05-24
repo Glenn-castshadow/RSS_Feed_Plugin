@@ -114,6 +114,23 @@ class WRA_Shortcode {
 	}
 
 	/**
+	 * Render callback for the Gutenberg block.
+	 *
+	 * Converts block boolean attributes to the 'yes'/'no' strings the shortcode renderer expects,
+	 * then delegates to render().
+	 *
+	 * @param array $atts Block attributes from the editor.
+	 * @return string
+	 */
+	public function render_block( $atts ) {
+		$atts['show_image']   = ! empty( $atts['show_image'] ) ? 'yes' : 'no';
+		$atts['show_date']    = ! empty( $atts['show_date'] ) ? 'yes' : 'no';
+		$atts['show_excerpt'] = ! empty( $atts['show_excerpt'] ) ? 'yes' : 'no';
+
+		return $this->render( $atts );
+	}
+
+	/**
 	 * Parse feed URL string.
 	 *
 	 * @param string $feeds Feed URLs.

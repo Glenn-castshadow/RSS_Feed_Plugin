@@ -1,0 +1,47 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "curated-rss-aggregator/feed",
+	"version": "0.2.0",
+	"title": "Curated RSS Feed",
+	"category": "widgets",
+	"description": "Display RSS feed items with configurable layout and keyword filters.",
+	"textdomain": "curated-rss-aggregator",
+	"attributes": {
+		"feeds": {
+			"type": "string",
+			"default": ""
+		},
+		"items": {
+			"type": "integer",
+			"default": 6
+		},
+		"layout": {
+			"type": "string",
+			"default": "grid"
+		},
+		"show_image": {
+			"type": "boolean",
+			"default": true
+		},
+		"show_date": {
+			"type": "boolean",
+			"default": true
+		},
+		"show_excerpt": {
+			"type": "boolean",
+			"default": true
+		},
+		"include_keywords": {
+			"type": "string",
+			"default": ""
+		},
+		"exclude_keywords": {
+			"type": "string",
+			"default": ""
+		}
+	},
+	"supports": {
+		"html": false
+	}
+}
