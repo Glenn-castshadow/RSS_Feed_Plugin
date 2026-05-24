@@ -5,7 +5,7 @@
 	"version": "0.2.0",
 	"title": "Curated RSS Feed",
 	"category": "widgets",
-	"description": "Display RSS feed items with configurable layout and keyword filters.",
+	"description": "Display RSS feed items with configurable layout, styling, and filters.",
 	"textdomain": "curated-rss-aggregator",
 	"attributes": {
 		"feeds": {
@@ -20,6 +20,18 @@
 			"type": "string",
 			"default": "grid"
 		},
+		"columns": {
+			"type": "integer",
+			"default": 0
+		},
+		"image_ratio": {
+			"type": "string",
+			"default": "16-9"
+		},
+		"card_style": {
+			"type": "string",
+			"default": "default"
+		},
 		"show_image": {
 			"type": "boolean",
 			"default": true
@@ -28,9 +40,25 @@
 			"type": "boolean",
 			"default": true
 		},
+		"show_source": {
+			"type": "boolean",
+			"default": false
+		},
+		"show_author": {
+			"type": "boolean",
+			"default": false
+		},
 		"show_excerpt": {
 			"type": "boolean",
 			"default": true
+		},
+		"show_read_more": {
+			"type": "boolean",
+			"default": false
+		},
+		"read_more_text": {
+			"type": "string",
+			"default": ""
 		},
 		"include_keywords": {
 			"type": "string",

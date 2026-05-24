@@ -188,8 +188,28 @@ class WRA_Admin {
 
 				<section class="wra-panel">
 					<h2><?php esc_html_e( 'Shortcode', 'curated-rss-aggregator' ); ?></h2>
-					<code>[curated_rss items="6" layout="grid"]</code>
-					<p><?php esc_html_e( 'Optional attributes: feeds, items, layout grid/list/compact, show_image, show_date, show_excerpt, include_keywords, exclude_keywords, affiliate_name, affiliate_value.', 'curated-rss-aggregator' ); ?></p>
+					<code>[curated_rss items="6" layout="grid" columns="3" card_style="shadow"]</code>
+					<table class="widefat striped" style="margin-top:8px;font-size:0.875rem;">
+						<thead><tr><th><?php esc_html_e( 'Attribute', 'curated-rss-aggregator' ); ?></th><th><?php esc_html_e( 'Options / default', 'curated-rss-aggregator' ); ?></th></tr></thead>
+						<tbody>
+							<tr><td><code>layout</code></td><td>grid · list · compact <em>(grid)</em></td></tr>
+							<tr><td><code>columns</code></td><td>1–6, 0 = auto <em>(0)</em></td></tr>
+							<tr><td><code>card_style</code></td><td>default · shadow · flat · outline · none <em>(default)</em></td></tr>
+							<tr><td><code>image_ratio</code></td><td>16-9 · 4-3 · 3-2 · 1-1 <em>(16-9)</em></td></tr>
+							<tr><td><code>items</code></td><td>integer <em>(6)</em></td></tr>
+							<tr><td><code>show_image</code></td><td>yes · no <em>(yes)</em></td></tr>
+							<tr><td><code>show_date</code></td><td>yes · no <em>(yes)</em></td></tr>
+							<tr><td><code>show_source</code></td><td>yes · no <em>(no)</em></td></tr>
+							<tr><td><code>show_author</code></td><td>yes · no <em>(no)</em></td></tr>
+							<tr><td><code>show_excerpt</code></td><td>yes · no <em>(yes)</em></td></tr>
+							<tr><td><code>show_read_more</code></td><td>yes · no <em>(no)</em></td></tr>
+							<tr><td><code>read_more_text</code></td><td>any string <em>(Read more)</em></td></tr>
+							<tr><td><code>include_keywords</code></td><td>comma-separated</td></tr>
+							<tr><td><code>exclude_keywords</code></td><td>comma-separated</td></tr>
+							<tr><td><code>affiliate_name</code></td><td>query param name</td></tr>
+							<tr><td><code>affiliate_value</code></td><td>query param value</td></tr>
+						</tbody>
+					</table>
 
 					<h3><?php esc_html_e( 'Preview', 'curated-rss-aggregator' ); ?></h3>
 					<?php if ( empty( $preview ) ) : ?>

@@ -13,6 +13,8 @@
 	grid-template-columns: 1fr;
 }
 
+/* ── Items ────────────────────────────────────────────────── */
+
 .wra-feed__item {
 	border: 1px solid rgba(20, 24, 31, 0.12);
 	border-radius: 8px;
@@ -31,6 +33,35 @@
 	border-radius: 0;
 }
 
+/* ── Card style variants ──────────────────────────────────── */
+
+.wra-feed--card-shadow .wra-feed__item {
+	border: 0;
+	box-shadow: 0 2px 14px rgba(0, 0, 0, 0.09);
+}
+
+.wra-feed--card-flat .wra-feed__item {
+	border: 0;
+	background: #f9fafb;
+}
+
+.wra-feed--card-outline .wra-feed__item {
+	border-width: 2px;
+}
+
+.wra-feed--card-none .wra-feed__item {
+	border: 0;
+	border-radius: 0;
+	background: transparent;
+}
+
+/* Compact needs its row separator even when card-none removes borders. */
+.wra-feed--card-none.wra-feed--compact .wra-feed__item {
+	border-bottom: 1px solid rgba(20, 24, 31, 0.12);
+}
+
+/* ── Image ────────────────────────────────────────────────── */
+
 .wra-feed__image-link {
 	display: block;
 	background: #f3f4f6;
@@ -42,6 +73,13 @@
 	aspect-ratio: 16 / 9;
 	object-fit: cover;
 }
+
+/* Image ratio variants */
+.wra-feed--ratio-4-3 .wra-feed__image { aspect-ratio: 4 / 3; }
+.wra-feed--ratio-1-1 .wra-feed__image { aspect-ratio: 1 / 1; }
+.wra-feed--ratio-3-2 .wra-feed__image { aspect-ratio: 3 / 2; }
+
+/* ── Body ─────────────────────────────────────────────────── */
 
 .wra-feed__body {
 	padding: 16px;
@@ -62,11 +100,29 @@
 	text-decoration: underline;
 }
 
+/* ── Meta row (date · source · author) ───────────────────── */
+
 .wra-feed__meta {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0 2px;
 	color: #5f6875;
 	font-size: 0.875rem;
 	margin-bottom: 8px;
+	line-height: 1.4;
 }
+
+.wra-feed__meta-sep {
+	color: #9ca3af;
+	user-select: none;
+}
+
+.wra-feed__source {
+	font-weight: 500;
+}
+
+/* ── Excerpt ──────────────────────────────────────────────── */
 
 .wra-feed__excerpt {
 	color: #303846;
@@ -75,11 +131,30 @@
 	margin: 0;
 }
 
+/* ── Read more link ───────────────────────────────────────── */
+
+.wra-feed__read-more {
+	display: inline-block;
+	margin-top: 10px;
+	font-size: 0.875rem;
+	font-weight: 600;
+	color: inherit;
+	text-decoration: none;
+}
+
+.wra-feed__read-more:hover {
+	text-decoration: underline;
+}
+
+/* ── Empty state ──────────────────────────────────────────── */
+
 .wra-feed-empty {
 	border: 1px solid rgba(20, 24, 31, 0.12);
 	border-radius: 8px;
 	padding: 16px;
 }
+
+/* ── Responsive ───────────────────────────────────────────── */
 
 @media (max-width: 640px) {
 	.wra-feed--list .wra-feed__item {

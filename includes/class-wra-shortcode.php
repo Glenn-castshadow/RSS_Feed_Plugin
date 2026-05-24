@@ -49,9 +49,16 @@ class WRA_Shortcode {
 				'feeds'            => $settings['feeds'],
 				'items'            => 6,
 				'layout'           => 'grid',
+				'columns'          => 0,
+				'image_ratio'      => '16-9',
+				'card_style'       => 'default',
 				'show_image'       => 'yes',
 				'show_date'        => 'yes',
+				'show_source'      => 'no',
+				'show_author'      => 'no',
 				'show_excerpt'     => 'yes',
+				'show_read_more'   => 'no',
+				'read_more_text'   => '',
 				'include_keywords' => '',
 				'exclude_keywords' => '',
 				'affiliate_name'   => $settings['affiliate_name'],
@@ -82,10 +89,36 @@ class WRA_Shortcode {
 		}
 
 		$layout = in_array( $atts['layout'], array( 'grid', 'list', 'compact' ), true ) ? $atts['layout'] : 'grid';
+		$columns = absint( $atts['columns'] );
+
+		$valid_card_styles = array( 'default', 'shadow', 'flat', 'outline', 'none' );
+		$card_style = in_array( $atts['card_style'], $valid_card_styles, true ) ? $atts['card_style'] : 'default';
+
+		$valid_ratios = array( '16-9', '4-3', '1-1', '3-2' );
+		$image_ratio = in_array( $atts['image_ratio'], $valid_ratios, true ) ? $atts['image_ratio'] : '16-9';
+
+		$read_more_text = ! empty( $atts['read_more_text'] )
+			? $atts['read_more_text']
+			: __( 'Read more', 'curated-rss-aggregator' );
+
+		// Build wrapper class list.
+		$wrapper_classes = array( 'wra-feed', 'wra-feed--' . $layout );
+		if ( 'default' !== $card_style ) {
+			$wrapper_classes[] = 'wra-feed--card-' . $card_style;
+		}
+		if ( '16-9' !== $image_ratio ) {
+			$wrapper_classes[] = 'wra-feed--ratio-' . $image_ratio;
+		}
+
+		// Explicit column count overrides the auto-fit grid (grid layout only).
+		$wrapper_style = '';
+		if ( $columns > 0 && 'grid' === $layout ) {
+			$wrapper_style = ' style="' . esc_attr( 'grid-template-columns: repeat(' . $columns . ', 1fr);' ) . '"';
+		}
 
 		ob_start();
 		?>
-		<div class="wra-feed wra-feed--<?php echo esc_attr( $layout ); ?>">
+		<div class="<?php echo esc_attr( implode( ' ', $wrapper_classes ) ); ?>"<?php echo $wrapper_style; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
 			<?php foreach ( $items as $item ) : ?>
 				<article class="wra-feed__item">
 					<?php if ( 'yes' === $atts['show_image'] && ! empty( $item['image'] ) ) : ?>
@@ -99,11 +132,36 @@ class WRA_Shortcode {
 								<?php echo esc_html( $item['title'] ); ?>
 							</a>
 						</h3>
-						<?php if ( 'yes' === $atts['show_date'] && ! empty( $item['date'] ) ) : ?>
-							<div class="wra-feed__meta"><?php echo esc_html( $item['date'] ); ?></div>
+						<?php
+						$meta_parts = array();
+						if ( 'yes' === $atts['show_date'] && ! empty( $item['date'] ) ) {
+							$meta_parts[] = '<span class="wra-feed__date">' . esc_html( $item['date'] ) . '</span>';
+						}
+						if ( 'yes' === $atts['show_source'] && ! empty( $item['source_feed'] ) ) {
+							$host = (string) parse_url( $item['source_feed'], PHP_URL_HOST );
+							if ( $host ) {
+								$meta_parts[] = '<span class="wra-feed__source">' . esc_html( $host ) . '</span>';
+							}
+						}
+						if ( 'yes' === $atts['show_author'] && ! empty( $item['author'] ) ) {
+							$meta_parts[] = '<span class="wra-feed__author">' . esc_html( $item['author'] ) . '</span>';
+						}
+						?>
+						<?php if ( ! empty( $meta_parts ) ) : ?>
+							<div class="wra-feed__meta">
+								<?php
+								// Each part is already escaped above; only the separator is added here.
+								echo implode( '<span class="wra-feed__meta-sep" aria-hidden="true"> · </span>', $meta_parts ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+								?>
+							</div>
 						<?php endif; ?>
 						<?php if ( 'yes' === $atts['show_excerpt'] && ! empty( $item['excerpt'] ) ) : ?>
 							<p class="wra-feed__excerpt"><?php echo esc_html( $item['excerpt'] ); ?></p>
+						<?php endif; ?>
+						<?php if ( 'yes' === $atts['show_read_more'] ) : ?>
+							<a class="wra-feed__read-more" href="<?php echo esc_url( $item['link'] ); ?>" target="_blank" rel="nofollow noopener">
+								<?php echo esc_html( $read_more_text ); ?> <span aria-hidden="true">&#8594;</span>
+							</a>
 						<?php endif; ?>
 					</div>
 				</article>
@@ -116,22 +174,21 @@ class WRA_Shortcode {
 	/**
 	 * Render callback for the Gutenberg block.
 	 *
-	 * Converts block boolean attributes to the 'yes'/'no' strings the shortcode renderer expects,
-	 * then delegates to render().
+	 * Block delivers booleans; shortcode render() expects 'yes'/'no' strings.
 	 *
-	 * @param array $atts Block attributes from the editor.
+	 * @param array $atts Block attributes.
 	 * @return string
 	 */
 	public function render_block( $atts ) {
-		$atts['show_image']   = ! empty( $atts['show_image'] ) ? 'yes' : 'no';
-		$atts['show_date']    = ! empty( $atts['show_date'] ) ? 'yes' : 'no';
-		$atts['show_excerpt'] = ! empty( $atts['show_excerpt'] ) ? 'yes' : 'no';
+		foreach ( array( 'show_image', 'show_date', 'show_source', 'show_author', 'show_excerpt', 'show_read_more' ) as $key ) {
+			$atts[ $key ] = ! empty( $atts[ $key ] ) ? 'yes' : 'no';
+		}
 
 		return $this->render( $atts );
 	}
 
 	/**
-	 * Parse feed URL string.
+	 * Parse feed URL string into an array.
 	 *
 	 * @param string $feeds Feed URLs.
 	 * @return array
