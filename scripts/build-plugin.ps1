@@ -64,4 +64,8 @@ try {
 	$zipStream.Close()
 }
 
+# Remove the staging folder so it cannot be mistaken for a second plugin
+# installation if this repo is used directly as a WordPress plugin folder.
+Remove-Item -LiteralPath $packageRoot -Recurse -Force
+
 Write-Host "Built $zipPath"

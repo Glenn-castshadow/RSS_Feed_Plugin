@@ -30,16 +30,23 @@ jobs:
       - name: Build plugin zip
         shell: bash
         run: |
-          mkdir -p dist/curated-rss-aggregator
-          rsync -av \
-            --exclude='.git' \
-            --exclude='.github' \
-            --exclude='dist' \
-            --exclude='scripts' \
-            --exclude='.gitignore' \
-            ./ dist/curated-rss-aggregator/
+          slug="curated-rss-aggregator"
+          staging="dist/$slug"
+          mkdir -p "$staging"
+
+          # Copy only the files that belong in the plugin.
+          # Using an explicit list prevents stray dev artefacts (dist/, scripts/,
+          # .github/, node_modules, etc.) from ending up inside the zip and being
+          # mistaken for a second plugin by WordPress.
+          for item in assets blocks includes README.md uninstall.php wordpress-rss-aggregator.php; do
+            [ -e "$item" ] && cp -r "$item" "$staging/"
+          done
+
           cd dist
-          zip -r "${{ steps.meta.outputs.zip }}" curated-rss-aggregator
+          zip -r "${{ steps.meta.outputs.zip }}" "$slug"
+
+          # Remove the staging folder so the artifact contains only the zip.
+          rm -rf "$slug"
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
