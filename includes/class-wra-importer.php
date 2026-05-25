@@ -76,8 +76,11 @@ class WRA_Importer {
 				'date_before'      => isset( $job['date_before'] ) ? $job['date_before'] : '',
 				'affiliate_name'   => $settings['affiliate_name'],
 				'affiliate_value'  => $settings['affiliate_value'],
+				'amazon_tag'       => $settings['amazon_tag'],
 			)
 		);
+
+		$amazon_tag = isset( $settings['amazon_tag'] ) ? $settings['amazon_tag'] : '';
 
 		$result = array(
 			'imported' => 0,
@@ -90,7 +93,7 @@ class WRA_Importer {
 				continue;
 			}
 
-			$post_id = $this->insert_item( $item, $job );
+			$post_id = $this->insert_item( $item, $job, $amazon_tag );
 			if ( $post_id ) {
 				$result['imported']++;
 			} else {
@@ -141,7 +144,7 @@ class WRA_Importer {
 	 * @param array $job  Job config.
 	 * @return int Post ID, or 0 on failure.
 	 */
-	private function insert_item( $item, $job ) {
+	private function insert_item( $item, $job, $amazon_tag = '' ) {
 		// Start with feed content.
 		$content = ! empty( $job['use_full_content'] ) ? $item['content'] : wpautop( esc_html( $item['excerpt'] ) );
 
@@ -158,6 +161,11 @@ class WRA_Importer {
 		if ( 'none' !== $ai_mode && null !== $this->ai_rewriter ) {
 			$ai_prompt = isset( $job['ai_prompt'] ) ? $job['ai_prompt'] : '';
 			$content   = $this->ai_rewriter->process( $content, $item['title'], $ai_mode, $ai_prompt );
+		}
+
+		// Rewrite Amazon links in the assembled content.
+		if ( ! empty( $amazon_tag ) ) {
+			$content = WRA_Amazon_Rewriter::rewrite_content( $content, $amazon_tag );
 		}
 
 		$content .= sprintf(

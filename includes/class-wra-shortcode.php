@@ -65,6 +65,7 @@ class WRA_Shortcode {
 				'exclude_keywords' => '',
 				'affiliate_name'   => $settings['affiliate_name'],
 				'affiliate_value'  => $settings['affiliate_value'],
+				'amazon_tag'       => $settings['amazon_tag'],
 			),
 			$atts,
 			'curated_rss'
@@ -82,6 +83,7 @@ class WRA_Shortcode {
 				'exclude_keywords' => sanitize_text_field( $atts['exclude_keywords'] ),
 				'affiliate_name'   => sanitize_key( $atts['affiliate_name'] ),
 				'affiliate_value'  => sanitize_text_field( $atts['affiliate_value'] ),
+				'amazon_tag'       => sanitize_text_field( $atts['amazon_tag'] ),
 			)
 		);
 

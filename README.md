@@ -2,7 +2,7 @@
 
 A WordPress plugin for displaying and importing RSS feeds. Show feeds anywhere with a shortcode or Gutenberg block, filter by keyword, limit items per source, and optionally import feed items as WordPress posts — with optional full-text extraction and AI rewrite/summarize.
 
-**Current version:** 0.3.1
+**Current version:** 0.4.0
 
 ---
 
@@ -35,7 +35,7 @@ A WordPress plugin for displaying and importing RSS feeds. Show feeds anywhere w
 
 ### From the zip (recommended)
 
-1. Download `curated-rss-aggregator-0.3.1.zip` from the `dist/` folder or a GitHub release.
+1. Download `curated-rss-aggregator-0.4.0.zip` from the `dist/` folder or a GitHub release.
 2. In WordPress go to **Plugins → Add New → Upload Plugin**.
 3. Upload the zip and click **Install Now**, then **Activate**.
 4. Open **RSS Aggregator** in the WordPress admin sidebar.
@@ -52,10 +52,10 @@ A WordPress plugin for displaying and importing RSS feeds. Show feeds anywhere w
 From the repository root on Windows (PowerShell):
 
 ```powershell
-.\scripts\build-plugin.ps1 -Version "0.3.1"
+.\scripts\build-plugin.ps1 -Version "0.4.0"
 ```
 
-The zip is written to `dist/curated-rss-aggregator-0.3.1.zip`.  
+The zip is written to `dist/curated-rss-aggregator-0.4.0.zip`.  
 Omit `-Version` to produce `dist/curated-rss-aggregator.zip`.
 
 > **Note:** The build script uses .NET's `ZipArchive` directly to ensure zip entry paths use forward slashes. PowerShell's `Compress-Archive` writes Windows backslashes, which breaks PHP's `ZipArchive` extraction on Linux servers.
@@ -159,6 +159,21 @@ In **RSS Aggregator → Display Feeds → AI Rewrite / Summarize**:
 Then on each import job set **AI processing** to *Rewrite* or *Summarize*.
 
 OpenRouter accepts any model listed at `openrouter.ai/models`. For OpenAI use standard chat model IDs such as `gpt-4o` or `gpt-4o-mini`.
+
+---
+
+## Amazon Associates
+
+Under **Display Feeds → Amazon Associates**, enter your Associates tag (e.g. `yourstore-20`).
+
+When set, the plugin automatically appends `?tag=yourstore-20` to any Amazon product URL it encounters — including:
+
+- Feed item links rendered by the shortcode and Gutenberg block
+- Amazon links embedded in post content imported by import jobs
+
+Supported Amazon domains: amazon.com, amazon.co.uk, amazon.de, amazon.ca, amazon.fr, amazon.it, amazon.es, amazon.co.jp, amazon.com.au, amazon.in, amazon.com.mx, amazon.com.br, amazon.nl, amazon.se, amazon.pl, amazon.sg, amazon.ae, amazon.sa, amazon.com.tr.
+
+Only product pages are tagged (URLs containing `/dp/`, `/gp/product/`, `/exec/obidos/ASIN/`, or `/ASIN/` followed by a 10-character ASIN).
 
 ---
 

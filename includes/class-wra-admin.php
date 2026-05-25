@@ -161,6 +161,15 @@ class WRA_Admin {
 							</p>
 						</div>
 
+						<h3><?php esc_html_e( 'Amazon Associates', 'curated-rss-aggregator' ); ?></h3>
+						<p class="description"><?php esc_html_e( 'Adds your Associates tag to Amazon product links in feed displays and imported post content.', 'curated-rss-aggregator' ); ?></p>
+						<div class="wra-fields">
+							<p>
+								<label for="wra-amazon-tag"><?php esc_html_e( 'Associates tag', 'curated-rss-aggregator' ); ?></label>
+								<input id="wra-amazon-tag" type="text" name="amazon_tag" value="<?php echo esc_attr( $settings['amazon_tag'] ); ?>" placeholder="yourstore-20">
+							</p>
+						</div>
+
 						<h3><?php esc_html_e( 'AI Rewrite / Summarize', 'curated-rss-aggregator' ); ?></h3>
 						<p class="description"><?php esc_html_e( 'Configure an AI provider here; choose a mode per import job below. Leave provider blank to disable AI processing globally.', 'curated-rss-aggregator' ); ?></p>
 						<div class="wra-fields">
@@ -330,6 +339,7 @@ class WRA_Admin {
 			'fallback_image'  => isset( $data['fallback_image'] ) ? esc_url_raw( wp_unslash( $data['fallback_image'] ) ) : '',
 			'affiliate_name'  => isset( $data['affiliate_name'] ) ? sanitize_key( wp_unslash( $data['affiliate_name'] ) ) : '',
 			'affiliate_value' => isset( $data['affiliate_value'] ) ? sanitize_text_field( wp_unslash( $data['affiliate_value'] ) ) : '',
+			'amazon_tag'      => isset( $data['amazon_tag'] ) ? sanitize_text_field( wp_unslash( $data['amazon_tag'] ) ) : '',
 			'ai_provider'     => isset( $data['ai_provider'] ) ? sanitize_key( wp_unslash( $data['ai_provider'] ) ) : '',
 			'ai_api_key'      => '' !== $ai_key ? sanitize_text_field( $ai_key ) : $existing['ai_api_key'],
 			'ai_model'        => isset( $data['ai_model'] ) ? sanitize_text_field( wp_unslash( $data['ai_model'] ) ) : '',

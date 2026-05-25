@@ -38,6 +38,7 @@ class WRA_Feed_Fetcher {
 				'fallback_image'   => '',
 				'affiliate_name'   => '',
 				'affiliate_value'  => '',
+				'amazon_tag'       => '',
 			)
 		);
 
@@ -131,6 +132,7 @@ class WRA_Feed_Fetcher {
 	private function normalize_item( $item, $source_url, $args ) {
 		$link = $item->get_permalink();
 		$link = $this->append_affiliate_params( $link, $args['affiliate_name'], $args['affiliate_value'] );
+		$link = WRA_Amazon_Rewriter::rewrite_url( $link, $args['amazon_tag'] );
 
 		$content     = $item->get_content();
 		$description = $item->get_description();
