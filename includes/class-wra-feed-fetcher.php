@@ -100,8 +100,7 @@ class WRA_Feed_Fetcher {
 			return array_slice( $items, $offset, $limit );
 		}
 
-		// Walk the date-sorted list and take at most $per_feed items from each source,
-		// collecting enough to cover both the offset and the final limit.
+		// Walk the spread list and take at most $per_feed items from each source.
 		$result      = array();
 		$feed_counts = array();
 		foreach ( $items as $item ) {
@@ -114,6 +113,22 @@ class WRA_Feed_Fetcher {
 				$feed_counts[ $src ]++;
 				if ( count( $result ) >= $offset + $limit ) {
 					break;
+				}
+			}
+		}
+
+		// If some feeds were empty or errored, the per_feed cap may have left us
+		// short of the requested total. Do a second pass and backfill from any
+		// remaining items — ignoring the per-source cap — so the grid stays full.
+		if ( count( $result ) < $offset + $limit ) {
+			$seen = array_flip( array_column( $result, 'guid' ) );
+			foreach ( $items as $item ) {
+				if ( count( $result ) >= $offset + $limit ) {
+					break;
+				}
+				if ( ! isset( $seen[ $item['guid'] ] ) ) {
+					$result[]                  = $item;
+					$seen[ $item['guid'] ]     = true;
 				}
 			}
 		}

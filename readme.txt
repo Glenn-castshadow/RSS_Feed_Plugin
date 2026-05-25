@@ -3,7 +3,7 @@ Contributors: castshadow
 Tags: rss, feed, aggregator, news, import
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 1.1.0
+Stable tag: 1.1.1
 Requires PHP: 7.4
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -78,6 +78,9 @@ Use the Export / Import Settings panel (collapsed under the Display Feeds sectio
 
 == Changelog ==
 
+= 1.1.1 =
+* Fixed: when some feed URLs return no items, the per_feed cap no longer leaves the grid short — a backfill pass draws extra items from working feeds to hit the requested total.
+
 = 1.1.0 =
 * Added feed diversity spreading — articles from the same source feed are automatically interleaved so no two appear side by side when items from other feeds are available.
 * Added GitHub-based automatic updates — the plugin checks for new releases and integrates with the standard WordPress one-click upgrader.
@@ -115,6 +118,9 @@ Use the Export / Import Settings panel (collapsed under the Display Feeds sectio
 * Added full-text extraction from source article URLs.
 
 == Upgrade Notice ==
+
+= 1.1.1 =
+Fixes grid underfill when some feed URLs return no items. No database changes required.
 
 = 1.1.0 =
 Adds feed diversity spreading and GitHub-based auto-updates. No database changes required.
