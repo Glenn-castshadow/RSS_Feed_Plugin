@@ -69,7 +69,7 @@ class WRA_Importer {
 			array(
 				'limit'            => absint( $job['limit'] ),
 				'cache_minutes'    => absint( $settings['cache_minutes'] ),
-				'fallback_image'   => $settings['fallback_image'],
+				'fallback_images'  => WRA_Plugin::get_fallback_images(),
 				'include_keywords' => isset( $job['include_keywords'] ) ? $job['include_keywords'] : '',
 				'exclude_keywords' => isset( $job['exclude_keywords'] ) ? $job['exclude_keywords'] : '',
 				'date_after'       => isset( $job['date_after'] ) ? $job['date_after'] : '',

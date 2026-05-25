@@ -78,7 +78,7 @@ class WRA_Shortcode {
 				'limit'            => absint( $atts['items'] ),
 				'per_feed'         => absint( $atts['per_feed'] ),
 				'cache_minutes'    => absint( $settings['cache_minutes'] ),
-				'fallback_image'   => $settings['fallback_image'],
+				'fallback_images'  => WRA_Plugin::get_fallback_images(),
 				'include_keywords' => sanitize_text_field( $atts['include_keywords'] ),
 				'exclude_keywords' => sanitize_text_field( $atts['exclude_keywords'] ),
 				'affiliate_name'   => sanitize_key( $atts['affiliate_name'] ),

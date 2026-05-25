@@ -110,10 +110,11 @@ class WRA_Plugin {
 			add_option(
 				self::SETTINGS_OPTION,
 				array(
-					'feeds'           => '',
-					'cache_minutes'   => 60,
-					'fallback_image'  => '',
-					'affiliate_name'  => '',
+					'feeds'               => '',
+					'cache_minutes'       => 60,
+					'fallback_image'      => '',
+					'fallback_image_ids'  => '',
+					'affiliate_name'      => '',
 					'affiliate_value' => '',
 					'amazon_tag'      => '',
 					'ai_provider'     => '',
@@ -161,10 +162,11 @@ class WRA_Plugin {
 	 */
 	public static function get_settings() {
 		$defaults = array(
-			'feeds'           => '',
-			'cache_minutes'   => 60,
-			'fallback_image'  => '',
-			'affiliate_name'  => '',
+			'feeds'              => '',
+			'cache_minutes'      => 60,
+			'fallback_image'     => '',
+			'fallback_image_ids' => '',
+			'affiliate_name'     => '',
 			'affiliate_value' => '',
 			'amazon_tag'      => '',
 			'ai_provider'     => '',
@@ -173,6 +175,33 @@ class WRA_Plugin {
 		);
 
 		return wp_parse_args( get_option( self::SETTINGS_OPTION, array() ), $defaults );
+	}
+
+	/**
+	 * Resolve fallback image attachment IDs to full-size URLs.
+	 *
+	 * Falls back to the legacy single-URL setting when no IDs are saved.
+	 *
+	 * @return string[]
+	 */
+	public static function get_fallback_images() {
+		$settings = self::get_settings();
+		$ids      = array_filter( array_map( 'intval', explode( ',', $settings['fallback_image_ids'] ) ) );
+		$urls     = array();
+
+		foreach ( $ids as $id ) {
+			$url = wp_get_attachment_image_url( $id, 'full' );
+			if ( $url ) {
+				$urls[] = $url;
+			}
+		}
+
+		// Backward compat: honour the old single-URL setting if nothing else is set.
+		if ( empty( $urls ) && ! empty( $settings['fallback_image'] ) ) {
+			$urls[] = $settings['fallback_image'];
+		}
+
+		return $urls;
 	}
 
 	/**

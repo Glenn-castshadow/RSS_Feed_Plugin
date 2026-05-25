@@ -64,8 +64,17 @@ class WRA_Admin {
 			return;
 		}
 
+		wp_enqueue_media();
 		wp_enqueue_style( 'wra-admin', WRA_PLUGIN_URL . 'assets/css/admin.css', array(), WRA_VERSION );
-		wp_enqueue_script( 'wra-admin', WRA_PLUGIN_URL . 'assets/js/admin.js', array(), WRA_VERSION, true );
+		wp_enqueue_script( 'wra-admin', WRA_PLUGIN_URL . 'assets/js/admin.js', array( 'jquery' ), WRA_VERSION, true );
+		wp_localize_script(
+			'wra-admin',
+			'wra_admin',
+			array(
+				'media_title'  => __( 'Select Fallback Images', 'curated-rss-aggregator' ),
+				'media_button' => __( 'Use these images', 'curated-rss-aggregator' ),
+			)
+		);
 	}
 
 	/**
@@ -143,11 +152,27 @@ class WRA_Admin {
 								<label for="wra-cache"><?php esc_html_e( 'Cache minutes', 'curated-rss-aggregator' ); ?></label>
 								<input id="wra-cache" type="number" min="5" name="cache_minutes" value="<?php echo esc_attr( $settings['cache_minutes'] ); ?>">
 							</p>
-							<p>
-								<label for="wra-fallback"><?php esc_html_e( 'Fallback image URL', 'curated-rss-aggregator' ); ?></label>
-								<input id="wra-fallback" type="url" name="fallback_image" value="<?php echo esc_url( $settings['fallback_image'] ); ?>">
-							</p>
 						</div>
+
+						<p>
+							<label><?php esc_html_e( 'Fallback images', 'curated-rss-aggregator' ); ?></label>
+							<span class="description" style="display:block;margin-bottom:8px;"><?php esc_html_e( 'Shown when a feed item has no image. Multiple images are chosen randomly.', 'curated-rss-aggregator' ); ?></span>
+							<span id="wra-fallback-images-preview" class="wra-fallback-images">
+								<?php
+								$fb_ids = array_filter( array_map( 'intval', explode( ',', $settings['fallback_image_ids'] ) ) );
+								foreach ( $fb_ids as $fb_id ) :
+									$thumb = wp_get_attachment_image_url( $fb_id, 'thumbnail' );
+									if ( ! $thumb ) continue;
+									?>
+									<span class="wra-fallback-thumb" data-id="<?php echo esc_attr( $fb_id ); ?>">
+										<img src="<?php echo esc_url( $thumb ); ?>" alt="">
+										<button type="button" class="wra-remove-thumb" aria-label="<?php esc_attr_e( 'Remove', 'curated-rss-aggregator' ); ?>">&times;</button>
+									</span>
+								<?php endforeach; ?>
+							</span>
+							<input type="hidden" id="wra-fallback-image-ids" name="fallback_image_ids" value="<?php echo esc_attr( $settings['fallback_image_ids'] ); ?>">
+							<button type="button" id="wra-add-fallback-image" class="button" style="margin-top:8px;"><?php esc_html_e( 'Add images', 'curated-rss-aggregator' ); ?></button>
+						</p>
 
 						<h3><?php esc_html_e( 'Referral Parameters', 'curated-rss-aggregator' ); ?></h3>
 						<div class="wra-fields">
@@ -378,11 +403,15 @@ class WRA_Admin {
 		$existing = WRA_Plugin::get_settings();
 		$ai_key   = isset( $data['ai_api_key'] ) ? trim( wp_unslash( $data['ai_api_key'] ) ) : '';
 
+		$raw_ids           = isset( $data['fallback_image_ids'] ) ? sanitize_text_field( wp_unslash( $data['fallback_image_ids'] ) ) : '';
+		$sanitized_ids     = implode( ',', array_filter( array_map( 'absint', explode( ',', $raw_ids ) ) ) );
+
 		return array(
-			'feeds'           => isset( $data['feeds'] ) ? $this->sanitize_multiline_urls( wp_unslash( $data['feeds'] ) ) : '',
-			'cache_minutes'   => isset( $data['cache_minutes'] ) ? max( 5, absint( $data['cache_minutes'] ) ) : 60,
-			'fallback_image'  => isset( $data['fallback_image'] ) ? esc_url_raw( wp_unslash( $data['fallback_image'] ) ) : '',
-			'affiliate_name'  => isset( $data['affiliate_name'] ) ? sanitize_key( wp_unslash( $data['affiliate_name'] ) ) : '',
+			'feeds'              => isset( $data['feeds'] ) ? $this->sanitize_multiline_urls( wp_unslash( $data['feeds'] ) ) : '',
+			'cache_minutes'      => isset( $data['cache_minutes'] ) ? max( 5, absint( $data['cache_minutes'] ) ) : 60,
+			'fallback_image'     => '',
+			'fallback_image_ids' => $sanitized_ids,
+			'affiliate_name'     => isset( $data['affiliate_name'] ) ? sanitize_key( wp_unslash( $data['affiliate_name'] ) ) : '',
 			'affiliate_value' => isset( $data['affiliate_value'] ) ? sanitize_text_field( wp_unslash( $data['affiliate_value'] ) ) : '',
 			'amazon_tag'      => isset( $data['amazon_tag'] ) ? sanitize_text_field( wp_unslash( $data['amazon_tag'] ) ) : '',
 			'ai_provider'     => isset( $data['ai_provider'] ) ? sanitize_key( wp_unslash( $data['ai_provider'] ) ) : '',
@@ -468,9 +497,9 @@ class WRA_Admin {
 		return $this->fetcher->get_items(
 			preg_split( '/[\r\n,]+/', $settings['feeds'] ),
 			array(
-				'limit'          => 5,
-				'cache_minutes'  => $settings['cache_minutes'],
-				'fallback_image' => $settings['fallback_image'],
+				'limit'           => 5,
+				'cache_minutes'   => $settings['cache_minutes'],
+				'fallback_images' => WRA_Plugin::get_fallback_images(),
 			)
 		);
 	}

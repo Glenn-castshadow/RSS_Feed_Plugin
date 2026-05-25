@@ -72,6 +72,50 @@
 	margin: 0;
 }
 
+.wra-fallback-images {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-bottom: 4px;
+}
+
+.wra-fallback-thumb {
+	display: inline-block;
+	position: relative;
+}
+
+.wra-fallback-thumb img {
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+	display: block;
+	height: 80px;
+	object-fit: cover;
+	width: 80px;
+}
+
+.wra-remove-thumb {
+	align-items: center;
+	background: #cc1818;
+	border: none;
+	border-radius: 50%;
+	color: #fff;
+	cursor: pointer;
+	display: flex;
+	font-size: 14px;
+	height: 20px;
+	justify-content: center;
+	line-height: 1;
+	padding: 0;
+	position: absolute;
+	right: -6px;
+	top: -6px;
+	width: 20px;
+}
+
+.wra-remove-thumb:hover {
+	background: #a00;
+}
+
 .wra-log {
 	margin-top: 16px;
 }

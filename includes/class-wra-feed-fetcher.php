@@ -35,7 +35,7 @@ class WRA_Feed_Fetcher {
 				'exclude_keywords' => '',
 				'date_after'       => '',
 				'date_before'      => '',
-				'fallback_image'   => '',
+				'fallback_images'  => array(),
 				'affiliate_name'   => '',
 				'affiliate_value'  => '',
 				'amazon_tag'       => '',
@@ -138,6 +138,11 @@ class WRA_Feed_Fetcher {
 		$description = $item->get_description();
 		$image       = $this->extract_image( $item, $content . ' ' . $description );
 
+		if ( ! $image ) {
+			$pool  = array_values( array_filter( (array) $args['fallback_images'] ) );
+			$image = ! empty( $pool ) ? $pool[ array_rand( $pool ) ] : '';
+		}
+
 		return array(
 			'title'       => wp_strip_all_tags( $item->get_title() ),
 			'link'        => esc_url_raw( $link ),
@@ -147,7 +152,7 @@ class WRA_Feed_Fetcher {
 			'author'      => $item->get_author() ? sanitize_text_field( $item->get_author()->get_name() ) : '',
 			'excerpt'     => wp_trim_words( wp_strip_all_tags( $description ), 35 ),
 			'content'     => wp_kses_post( $content ? $content : $description ),
-			'image'       => $image ? esc_url_raw( $image ) : esc_url_raw( $args['fallback_image'] ),
+			'image'       => esc_url_raw( $image ),
 			'source_feed' => esc_url_raw( $source_url ),
 		);
 	}
