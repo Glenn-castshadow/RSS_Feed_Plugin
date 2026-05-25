@@ -9,10 +9,14 @@ $root = Split-Path -Parent $PSScriptRoot
 $dist = Join-Path $root "dist"
 $packageRoot = Join-Path $dist $Slug
 
-if (Test-Path $dist) {
-	Remove-Item -LiteralPath $dist -Recurse -Force
+# Only remove the staging subfolder, not the whole dist/ directory.
+# Deleting the dist/ directory fails when OneDrive (or another process)
+# holds a handle on the folder itself.
+if (Test-Path $packageRoot) {
+	Remove-Item -LiteralPath $packageRoot -Recurse -Force
 }
 
+New-Item -ItemType Directory -Force -Path $dist | Out-Null
 New-Item -ItemType Directory -Force -Path $packageRoot | Out-Null
 
 $items = @(
