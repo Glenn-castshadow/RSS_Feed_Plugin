@@ -23,6 +23,7 @@ $items = @(
 	"assets",
 	"blocks",
 	"includes",
+	"readme.txt",
 	"README.md",
 	"uninstall.php",
 	"wordpress-rss-aggregator.php"
