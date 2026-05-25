@@ -44,6 +44,7 @@ class WRA_Plugin {
 		new WRA_Admin( self::$fetcher, $importer );
 
 		add_action( 'init', array( __CLASS__, 'register_block' ) );
+		add_action( 'init', array( __CLASS__, 'migrate_cron_schedule' ) );
 		add_action( 'elementor/widgets/register', array( __CLASS__, 'register_elementor_widget' ) );
 		add_action( self::CRON_HOOK, array( $importer, 'run_scheduled_jobs' ) );
 		add_filter( 'cron_schedules', array( __CLASS__, 'add_cron_schedules' ) );
@@ -129,7 +130,7 @@ class WRA_Plugin {
 		}
 
 		if ( ! wp_next_scheduled( self::CRON_HOOK ) ) {
-			wp_schedule_event( time() + MINUTE_IN_SECONDS, 'wra_every_30_minutes', self::CRON_HOOK );
+			wp_schedule_event( time() + MINUTE_IN_SECONDS, 'wra_every_15_minutes', self::CRON_HOOK );
 		}
 	}
 
@@ -146,7 +147,28 @@ class WRA_Plugin {
 	 * @param array $schedules Schedules.
 	 * @return array
 	 */
+	/**
+	 * Upgrade the cron event to the 15-minute base interval for existing installs.
+	 *
+	 * Called on 'init' so the cron_schedules filter is already registered.
+	 */
+	public static function migrate_cron_schedule() {
+		$timestamp = wp_next_scheduled( self::CRON_HOOK );
+		if ( ! $timestamp ) {
+			return;
+		}
+		$event = wp_get_scheduled_event( self::CRON_HOOK );
+		if ( $event && 'wra_every_15_minutes' !== $event->schedule ) {
+			wp_unschedule_event( $timestamp, self::CRON_HOOK );
+			wp_schedule_event( time() + MINUTE_IN_SECONDS, 'wra_every_15_minutes', self::CRON_HOOK );
+		}
+	}
+
 	public static function add_cron_schedules( $schedules ) {
+		$schedules['wra_every_15_minutes'] = array(
+			'interval' => 15 * MINUTE_IN_SECONDS,
+			'display'  => __( 'Every 15 minutes', 'curated-rss-aggregator' ),
+		);
 		$schedules['wra_every_30_minutes'] = array(
 			'interval' => 30 * MINUTE_IN_SECONDS,
 			'display'  => __( 'Every 30 minutes', 'curated-rss-aggregator' ),

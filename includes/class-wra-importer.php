@@ -48,8 +48,17 @@ class WRA_Importer {
 	 * Run all enabled scheduled jobs.
 	 */
 	public function run_scheduled_jobs() {
+		$now = current_time( 'timestamp' );
+
 		foreach ( WRA_Plugin::get_import_jobs() as $job ) {
-			if ( ! empty( $job['enabled'] ) ) {
+			if ( empty( $job['enabled'] ) ) {
+				continue;
+			}
+
+			$frequency = isset( $job['frequency'] ) ? (int) $job['frequency'] : 30;
+			$last_run  = ! empty( $job['log'][0]['time'] ) ? strtotime( $job['log'][0]['time'] ) : 0;
+
+			if ( $now >= $last_run + $frequency * MINUTE_IN_SECONDS ) {
 				$this->run_job( $job );
 			}
 		}

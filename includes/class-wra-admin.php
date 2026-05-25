@@ -121,6 +121,16 @@ class WRA_Admin {
 			$result = isset( $jobs[ $job_id ] ) ? $this->importer->run_job( $jobs[ $job_id ] ) : array( 'imported' => 0, 'skipped' => 0 );
 			$this->redirect_with_message( 'job_ran', $result );
 		}
+
+		if ( 'clear_feed_cache' === $action ) {
+			$this->clear_feed_cache();
+			$this->redirect_with_message( 'cache_cleared' );
+		}
+
+		if ( 'import_opml' === $action ) {
+			$added = $this->handle_opml_import();
+			$this->redirect_with_message( 'opml_imported', array( 'added' => $added ) );
+		}
 	}
 
 	/**
@@ -139,6 +149,14 @@ class WRA_Admin {
 			<div class="wra-admin__grid">
 				<section class="wra-panel">
 					<h2><?php esc_html_e( 'Display Feeds', 'curated-rss-aggregator' ); ?></h2>
+
+					<form method="post" style="margin-bottom:16px;">
+						<?php wp_nonce_field( 'wra_admin_action' ); ?>
+						<input type="hidden" name="wra_action" value="clear_feed_cache">
+						<button type="submit" class="button"><?php esc_html_e( 'Clear feed cache', 'curated-rss-aggregator' ); ?></button>
+						<span class="description" style="margin-left:8px;"><?php esc_html_e( 'Forces all feeds to re-fetch on next load.', 'curated-rss-aggregator' ); ?></span>
+					</form>
+
 					<form method="post">
 						<?php wp_nonce_field( 'wra_admin_action' ); ?>
 						<input type="hidden" name="wra_action" value="save_settings">
@@ -218,6 +236,29 @@ class WRA_Admin {
 
 						<?php submit_button( __( 'Save Settings', 'curated-rss-aggregator' ) ); ?>
 					</form>
+
+					<details class="wra-opml" style="margin-top:16px;">
+						<summary style="cursor:pointer;font-weight:600;"><?php esc_html_e( 'Import OPML', 'curated-rss-aggregator' ); ?></summary>
+						<form method="post" enctype="multipart/form-data" style="margin-top:12px;">
+							<?php wp_nonce_field( 'wra_admin_action' ); ?>
+							<input type="hidden" name="wra_action" value="import_opml">
+							<p>
+								<label for="wra-opml-file"><?php esc_html_e( 'OPML file', 'curated-rss-aggregator' ); ?></label>
+								<input id="wra-opml-file" type="file" name="opml_file" accept=".opml,.xml">
+							</p>
+							<p>
+								<label style="display:inline;margin-right:16px;">
+									<input type="radio" name="opml_mode" value="merge" checked>
+									<?php esc_html_e( 'Merge with existing feeds', 'curated-rss-aggregator' ); ?>
+								</label>
+								<label style="display:inline;">
+									<input type="radio" name="opml_mode" value="replace">
+									<?php esc_html_e( 'Replace existing feeds', 'curated-rss-aggregator' ); ?>
+								</label>
+							</p>
+							<button type="submit" class="button"><?php esc_html_e( 'Import OPML', 'curated-rss-aggregator' ); ?></button>
+						</form>
+					</details>
 				</section>
 
 				<section class="wra-panel">
@@ -275,6 +316,17 @@ class WRA_Admin {
 						<p>
 							<label for="wra-job-limit"><?php esc_html_e( 'Items per run', 'curated-rss-aggregator' ); ?></label>
 							<input id="wra-job-limit" type="number" min="1" max="50" name="limit" value="<?php echo esc_attr( $edit_job ? $edit_job['limit'] : 10 ); ?>">
+						</p>
+						<p>
+							<label for="wra-job-frequency"><?php esc_html_e( 'Run every', 'curated-rss-aggregator' ); ?></label>
+							<select id="wra-job-frequency" name="frequency">
+								<?php
+								$current_freq = $edit_job && isset( $edit_job['frequency'] ) ? (int) $edit_job['frequency'] : 30;
+								foreach ( array( 15 => '15 minutes', 30 => '30 minutes', 60 => '1 hour', 120 => '2 hours', 360 => '6 hours', 720 => '12 hours', 1440 => '24 hours' ) as $val => $label ) :
+									?>
+									<option value="<?php echo esc_attr( $val ); ?>" <?php selected( $current_freq, $val ); ?>><?php echo esc_html( $label ); ?></option>
+								<?php endforeach; ?>
+							</select>
 						</p>
 						<p>
 							<label for="wra-job-status"><?php esc_html_e( 'Post status', 'curated-rss-aggregator' ); ?></label>
@@ -440,6 +492,7 @@ class WRA_Admin {
 			'name'                 => isset( $data['name'] ) ? sanitize_text_field( wp_unslash( $data['name'] ) ) : __( 'Untitled import', 'curated-rss-aggregator' ),
 			'feeds'                => isset( $data['feeds'] ) ? $this->sanitize_multiline_urls( wp_unslash( $data['feeds'] ) ) : '',
 			'limit'                => isset( $data['limit'] ) ? max( 1, min( 50, absint( $data['limit'] ) ) ) : 10,
+			'frequency'            => isset( $data['frequency'] ) ? max( 15, absint( $data['frequency'] ) ) : 30,
 			'post_status'          => isset( $data['post_status'] ) ? sanitize_key( wp_unslash( $data['post_status'] ) ) : 'draft',
 			'post_type'            => isset( $data['post_type'] ) ? sanitize_key( wp_unslash( $data['post_type'] ) ) : 'post',
 			'category'             => isset( $data['category'] ) ? absint( $data['category'] ) : 0,
@@ -528,6 +581,15 @@ class WRA_Admin {
 				$imported,
 				$skipped
 			);
+		} elseif ( 'cache_cleared' === $message ) {
+			$text = __( 'Feed cache cleared.', 'curated-rss-aggregator' );
+		} elseif ( 'opml_imported' === $message ) {
+			$added = isset( $_GET['added'] ) ? absint( $_GET['added'] ) : 0;
+			$text  = sprintf(
+				/* translators: %d: number of feed URLs added */
+				_n( 'OPML imported. %d feed URL added.', 'OPML imported. %d feed URLs added.', $added, 'curated-rss-aggregator' ),
+				$added
+			);
 		}
 
 		printf( '<div class="notice notice-success is-dismissible"><p>%s</p></div>', esc_html( $text ) );
@@ -595,6 +657,94 @@ class WRA_Admin {
 			</tbody>
 		</table>
 		<?php
+	}
+
+	/**
+	 * Delete all SimplePie feed transients from the options table.
+	 */
+	private function clear_feed_cache() {
+		global $wpdb;
+		$like_value   = $wpdb->esc_like( '_transient_feed_' ) . '%';
+		$like_timeout = $wpdb->esc_like( '_transient_timeout_feed_' ) . '%';
+		$wpdb->query(
+			$wpdb->prepare(
+				"DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
+				$like_value,
+				$like_timeout
+			)
+		);
+	}
+
+	/**
+	 * Parse an uploaded OPML file and merge/replace the global feed list.
+	 *
+	 * @return int Number of new feed URLs added.
+	 */
+	private function handle_opml_import() {
+		if ( empty( $_FILES['opml_file']['tmp_name'] ) ) {
+			return 0;
+		}
+
+		$urls = $this->parse_opml_urls( $_FILES['opml_file']['tmp_name'] );
+		if ( empty( $urls ) ) {
+			return 0;
+		}
+
+		$mode     = isset( $_POST['opml_mode'] ) && 'replace' === $_POST['opml_mode'] ? 'replace' : 'merge';
+		$settings = WRA_Plugin::get_settings();
+
+		$existing = 'replace' === $mode
+			? array()
+			: array_filter( array_map( 'trim', preg_split( '/[\r\n,]+/', (string) $settings['feeds'] ) ) );
+
+		$merged = array_values( array_unique( array_merge( $existing, $urls ) ) );
+		$added  = count( $merged ) - count( $existing );
+
+		$settings['feeds'] = implode( "\n", $merged );
+		update_option( WRA_Plugin::SETTINGS_OPTION, $settings );
+
+		return max( 0, $added );
+	}
+
+	/**
+	 * Load and parse an OPML file, returning an array of feed URLs.
+	 *
+	 * @param string $file_path Absolute path to the temporary uploaded file.
+	 * @return string[]
+	 */
+	private function parse_opml_urls( $file_path ) {
+		libxml_use_internal_errors( true );
+		$xml = simplexml_load_file( $file_path );
+		libxml_clear_errors();
+
+		if ( false === $xml || ! isset( $xml->body ) ) {
+			return array();
+		}
+
+		$urls = array();
+		$this->extract_opml_urls( $xml->body, $urls );
+		return $urls;
+	}
+
+	/**
+	 * Recursively collect xmlUrl values from OPML outline elements.
+	 *
+	 * @param \SimpleXMLElement $node  Current node.
+	 * @param string[]          $urls  Accumulator passed by reference.
+	 */
+	private function extract_opml_urls( $node, &$urls ) {
+		foreach ( $node->outline as $outline ) {
+			$xml_url = (string) $outline['xmlUrl'];
+			if ( ! empty( $xml_url ) ) {
+				$clean = esc_url_raw( $xml_url );
+				if ( $clean ) {
+					$urls[] = $clean;
+				}
+			}
+			if ( $outline->outline ) {
+				$this->extract_opml_urls( $outline, $urls );
+			}
+		}
 	}
 
 	/**
