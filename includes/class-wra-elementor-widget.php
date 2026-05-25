@@ -224,6 +224,16 @@ class WRA_Elementor_Widget extends \Elementor\Widget_Base {
 			)
 		);
 
+		$this->add_control(
+			'show_load_more',
+			array(
+				'label'       => __( 'Show "Load more" button', 'curated-rss-aggregator' ),
+				'type'        => \Elementor\Controls_Manager::SWITCHER,
+				'default'     => '',
+				'description' => __( 'Adds an AJAX button visitors can click to load additional items.', 'curated-rss-aggregator' ),
+			)
+		);
+
 		$this->end_controls_section();
 
 		/* ── Keyword Filters ────────────────────────────────────── */
@@ -257,7 +267,7 @@ class WRA_Elementor_Widget extends \Elementor\Widget_Base {
 		$s = $this->get_settings_for_display();
 
 		// Elementor SWITCHER returns 'yes' or '' — map '' to 'no' for the shortcode renderer.
-		foreach ( array( 'show_image', 'show_date', 'show_source', 'show_author', 'show_excerpt', 'show_read_more' ) as $key ) {
+		foreach ( array( 'show_image', 'show_date', 'show_source', 'show_author', 'show_excerpt', 'show_read_more', 'show_load_more' ) as $key ) {
 			$s[ $key ] = ! empty( $s[ $key ] ) ? 'yes' : 'no';
 		}
 

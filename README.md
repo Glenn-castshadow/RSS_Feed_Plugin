@@ -2,7 +2,7 @@
 
 A WordPress plugin for displaying and importing RSS feeds. Show feeds anywhere with a shortcode or Gutenberg block, filter by keyword, limit items per source, and optionally import feed items as WordPress posts — with optional full-text extraction and AI rewrite/summarize.
 
-**Current version:** 0.5.0
+**Current version:** 0.6.0
 
 ---
 
@@ -30,6 +30,8 @@ A WordPress plugin for displaying and importing RSS feeds. Show feeds anywhere w
 - Manual "Run Now" button in admin
 - Manual feed cache clear button
 - OPML file import (merge or replace existing feed list)
+- "Load more" AJAX button — visitors browse deeper without a page reload
+- Feed health status panel — shows per-URL item count and error state
 
 ---
 
@@ -37,7 +39,7 @@ A WordPress plugin for displaying and importing RSS feeds. Show feeds anywhere w
 
 ### From the zip (recommended)
 
-1. Download `curated-rss-aggregator-0.5.0.zip` from the `dist/` folder or a GitHub release.
+1. Download `curated-rss-aggregator-0.6.0.zip` from the `dist/` folder or a GitHub release.
 2. In WordPress go to **Plugins → Add New → Upload Plugin**.
 3. Upload the zip and click **Install Now**, then **Activate**.
 4. Open **RSS Aggregator** in the WordPress admin sidebar.
@@ -54,10 +56,10 @@ A WordPress plugin for displaying and importing RSS feeds. Show feeds anywhere w
 From the repository root on Windows (PowerShell):
 
 ```powershell
-.\scripts\build-plugin.ps1 -Version "0.5.0"
+.\scripts\build-plugin.ps1 -Version "0.6.0"
 ```
 
-The zip is written to `dist/curated-rss-aggregator-0.5.0.zip`.  
+The zip is written to `dist/curated-rss-aggregator-0.6.0.zip`.  
 Omit `-Version` to produce `dist/curated-rss-aggregator.zip`.
 
 > **Note:** The build script uses .NET's `ZipArchive` directly to ensure zip entry paths use forward slashes. PowerShell's `Compress-Archive` writes Windows backslashes, which breaks PHP's `ZipArchive` extraction on Linux servers.
@@ -110,6 +112,7 @@ https://example.org/rss"
 | `read_more_text` | `Read more` | Label for the read-more link |
 | `include_keywords` | *(none)* | Comma-separated; item must match at least one |
 | `exclude_keywords` | *(none)* | Comma-separated; matching items are removed |
+| `show_load_more` | `no` | `yes` · `no` — AJAX "Load more" button |
 | `affiliate_name` | *(admin setting)* | Query parameter name appended to links |
 
 | `affiliate_value` | *(admin setting)* | Query parameter value |

@@ -154,6 +154,22 @@
 	padding: 16px;
 }
 
+/* ── Load more ────────────────────────────────────────────── */
+
+.wra-load-more-wrap {
+	text-align: center;
+	margin-top: 1.5rem;
+}
+
+.wra-load-more {
+	min-width: 120px;
+}
+
+.wra-load-more:disabled {
+	opacity: 0.6;
+	cursor: default;
+}
+
 /* ── Responsive ───────────────────────────────────────────── */
 
 @media (max-width: 640px) {

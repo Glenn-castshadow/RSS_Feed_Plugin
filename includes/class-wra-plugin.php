@@ -48,6 +48,8 @@ class WRA_Plugin {
 		add_action( 'elementor/widgets/register', array( __CLASS__, 'register_elementor_widget' ) );
 		add_action( self::CRON_HOOK, array( $importer, 'run_scheduled_jobs' ) );
 		add_filter( 'cron_schedules', array( __CLASS__, 'add_cron_schedules' ) );
+		add_action( 'wp_ajax_wra_load_more', array( self::$shortcode, 'ajax_load_more' ) );
+		add_action( 'wp_ajax_nopriv_wra_load_more', array( self::$shortcode, 'ajax_load_more' ) );
 	}
 
 	/**

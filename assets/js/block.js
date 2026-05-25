@@ -154,6 +154,12 @@
 							value: atts.read_more_text,
 							onChange: function ( v ) { set( { read_more_text: v } ); },
 							placeholder: __( 'Read more', 'curated-rss-aggregator' ),
+						} ),
+						el( ToggleControl, {
+							label: __( 'Show "Load more" button', 'curated-rss-aggregator' ),
+							checked: atts.show_load_more,
+							onChange: function ( v ) { set( { show_load_more: v } ); },
+							help: __( 'Adds an AJAX button visitors can click to load additional items.', 'curated-rss-aggregator' ),
 						} )
 					),
 

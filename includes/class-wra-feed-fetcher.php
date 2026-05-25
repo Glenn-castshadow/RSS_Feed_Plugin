@@ -29,6 +29,7 @@ class WRA_Feed_Fetcher {
 			$args,
 			array(
 				'limit'            => 10,
+				'offset'           => 0,
 				'per_feed'         => 0,
 				'cache_minutes'    => 60,
 				'include_keywords' => '',
@@ -63,9 +64,11 @@ class WRA_Feed_Fetcher {
 
 			// When per_feed is set, fetch enough items per feed to fill the cap even
 			// if some are filtered out. Without it, just cap at the total limit.
-			$fetch_per_feed = absint( $args['per_feed'] ) > 0
-				? max( absint( $args['limit'] ), absint( $args['per_feed'] ) * 3 )
-				: max( 1, absint( $args['limit'] ) );
+			// Add offset so pagination can skip already-seen items.
+			$effective_limit = absint( $args['limit'] ) + absint( $args['offset'] );
+			$fetch_per_feed  = absint( $args['per_feed'] ) > 0
+				? max( $effective_limit, absint( $args['per_feed'] ) * 3 )
+				: max( 1, $effective_limit );
 			$max_items = $feed->get_item_quantity( $fetch_per_feed );
 			foreach ( $feed->get_items( 0, $max_items ) as $item ) {
 				$normalized = $this->normalize_item( $item, $url, $args );
@@ -86,13 +89,15 @@ class WRA_Feed_Fetcher {
 		);
 
 		$limit    = max( 1, absint( $args['limit'] ) );
+		$offset   = max( 0, absint( $args['offset'] ) );
 		$per_feed = absint( $args['per_feed'] );
 
 		if ( 0 === $per_feed ) {
-			return array_slice( $items, 0, $limit );
+			return array_slice( $items, $offset, $limit );
 		}
 
-		// Walk the date-sorted list and take at most $per_feed items from each source.
+		// Walk the date-sorted list and take at most $per_feed items from each source,
+		// collecting enough to cover both the offset and the final limit.
 		$result      = array();
 		$feed_counts = array();
 		foreach ( $items as $item ) {
@@ -103,13 +108,13 @@ class WRA_Feed_Fetcher {
 			if ( $feed_counts[ $src ] < $per_feed ) {
 				$result[] = $item;
 				$feed_counts[ $src ]++;
-				if ( count( $result ) >= $limit ) {
+				if ( count( $result ) >= $offset + $limit ) {
 					break;
 				}
 			}
 		}
 
-		return $result;
+		return array_slice( $result, $offset, $limit );
 	}
 
 	/**
@@ -235,6 +240,49 @@ class WRA_Feed_Fetcher {
 		}
 
 		return '';
+	}
+
+	/**
+	 * Fetch each URL individually and return per-feed status info.
+	 *
+	 * Uses the same SimplePie transient cache as get_items(), so no extra HTTP
+	 * requests are made when feeds are already cached.
+	 *
+	 * @param string[] $urls          Feed URLs.
+	 * @param int      $cache_minutes Cache lifetime in minutes.
+	 * @return array { url => { ok: bool, count: int, error: string } }
+	 */
+	public function get_feed_health( $urls, $cache_minutes = 60 ) {
+		require_once ABSPATH . WPINC . '/feed.php';
+
+		add_filter( 'wp_feed_cache_transient_lifetime', array( $this, 'filter_cache_lifetime' ) );
+		$this->cache_lifetime = max( 60, absint( $cache_minutes ) * MINUTE_IN_SECONDS );
+
+		$results = array();
+		foreach ( $urls as $url ) {
+			$url = esc_url_raw( trim( $url ) );
+			if ( empty( $url ) ) {
+				continue;
+			}
+
+			$feed = fetch_feed( $url );
+			if ( is_wp_error( $feed ) ) {
+				$results[ $url ] = array(
+					'ok'    => false,
+					'count' => 0,
+					'error' => $feed->get_error_message(),
+				);
+			} else {
+				$results[ $url ] = array(
+					'ok'    => true,
+					'count' => $feed->get_item_quantity(),
+					'error' => '',
+				);
+			}
+		}
+
+		remove_filter( 'wp_feed_cache_transient_lifetime', array( $this, 'filter_cache_lifetime' ) );
+		return $results;
 	}
 
 	/**

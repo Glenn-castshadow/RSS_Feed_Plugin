@@ -283,10 +283,14 @@ class WRA_Admin {
 							<tr><td><code>read_more_text</code></td><td>any string <em>(Read more)</em></td></tr>
 							<tr><td><code>include_keywords</code></td><td>comma-separated</td></tr>
 							<tr><td><code>exclude_keywords</code></td><td>comma-separated</td></tr>
+							<tr><td><code>show_load_more</code></td><td>yes · no <em>(no)</em></td></tr>
 							<tr><td><code>affiliate_name</code></td><td>query param name</td></tr>
 							<tr><td><code>affiliate_value</code></td><td>query param value</td></tr>
 						</tbody>
 					</table>
+
+					<h3><?php esc_html_e( 'Feed Health', 'curated-rss-aggregator' ); ?></h3>
+					<?php $this->render_feed_health( $settings ); ?>
 
 					<h3><?php esc_html_e( 'Preview', 'curated-rss-aggregator' ); ?></h3>
 					<?php if ( empty( $preview ) ) : ?>
@@ -652,6 +656,47 @@ class WRA_Admin {
 								<button class="button button-link-delete" type="submit"><?php esc_html_e( 'Delete', 'curated-rss-aggregator' ); ?></button>
 							</form>
 						</td>
+					</tr>
+				<?php endforeach; ?>
+			</tbody>
+		</table>
+		<?php
+	}
+
+	/**
+	 * Render a per-feed health status table using cached feed data.
+	 *
+	 * @param array $settings Plugin settings.
+	 */
+	private function render_feed_health( $settings ) {
+		if ( empty( $settings['feeds'] ) ) {
+			echo '<p>' . esc_html__( 'Add feed URLs above to see health status.', 'curated-rss-aggregator' ) . '</p>';
+			return;
+		}
+
+		$urls   = array_filter( array_map( 'trim', preg_split( '/[\r\n,]+/', (string) $settings['feeds'] ) ) );
+		$health = $this->fetcher->get_feed_health( $urls, $settings['cache_minutes'] );
+		?>
+		<table class="widefat striped" style="margin-top:8px;font-size:0.875rem;">
+			<thead>
+				<tr>
+					<th><?php esc_html_e( 'Feed URL', 'curated-rss-aggregator' ); ?></th>
+					<th><?php esc_html_e( 'Status', 'curated-rss-aggregator' ); ?></th>
+					<th><?php esc_html_e( 'Items', 'curated-rss-aggregator' ); ?></th>
+				</tr>
+			</thead>
+			<tbody>
+				<?php foreach ( $health as $url => $info ) : ?>
+					<tr>
+						<td><code style="word-break:break-all;font-size:0.8rem;"><?php echo esc_html( $url ); ?></code></td>
+						<td>
+							<?php if ( $info['ok'] ) : ?>
+								<span style="color:#46b450;">&#10003; <?php esc_html_e( 'OK', 'curated-rss-aggregator' ); ?></span>
+							<?php else : ?>
+								<span style="color:#dc3232;" title="<?php echo esc_attr( $info['error'] ); ?>">&#10007; <?php esc_html_e( 'Error', 'curated-rss-aggregator' ); ?></span>
+							<?php endif; ?>
+						</td>
+						<td><?php echo esc_html( $info['count'] ); ?></td>
 					</tr>
 				<?php endforeach; ?>
 			</tbody>
