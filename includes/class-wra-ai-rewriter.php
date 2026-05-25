@@ -46,13 +46,14 @@ class WRA_AI_Rewriter {
 	 *
 	 * Returns the original content unchanged on API failure so imports are never blocked.
 	 *
-	 * @param string $content HTML content to process.
-	 * @param string $title   Post title sent as context.
-	 * @param string $mode    'rewrite' or 'summarize'.
-	 * @param string $prompt  Optional additional instructions appended to the system prompt.
+	 * @param string      $content HTML content to process.
+	 * @param string      $title   Post title sent as context.
+	 * @param string      $mode    'rewrite' or 'summarize'.
+	 * @param string      $prompt  Optional additional instructions appended to the system prompt.
+	 * @param string|null $error   Optional. Set to an error message string on failure.
 	 * @return string Processed content (wpautop'd plain text) or original HTML on failure.
 	 */
-	public function process( $content, $title, $mode, $prompt = '' ) {
+	public function process( $content, $title, $mode, $prompt = '', &$error = null ) {
 		$provider = isset( $this->settings['ai_provider'] ) ? $this->settings['ai_provider'] : '';
 		$api_key  = isset( $this->settings['ai_api_key'] ) ? trim( $this->settings['ai_api_key'] ) : '';
 		$model    = isset( $this->settings['ai_model'] ) && ! empty( $this->settings['ai_model'] )
@@ -104,7 +105,16 @@ class WRA_AI_Rewriter {
 			)
 		);
 
-		if ( is_wp_error( $response ) || 200 !== (int) wp_remote_retrieve_response_code( $response ) ) {
+		if ( is_wp_error( $response ) ) {
+			$error = $response->get_error_message();
+			return $content;
+		}
+
+		if ( 200 !== (int) wp_remote_retrieve_response_code( $response ) ) {
+			$body  = json_decode( wp_remote_retrieve_body( $response ), true );
+			$error = isset( $body['error']['message'] )
+				? $body['error']['message']
+				: sprintf( 'HTTP %d', (int) wp_remote_retrieve_response_code( $response ) );
 			return $content;
 		}
 

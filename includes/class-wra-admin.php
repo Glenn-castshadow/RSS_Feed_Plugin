@@ -131,6 +131,15 @@ class WRA_Admin {
 			$added = $this->handle_opml_import();
 			$this->redirect_with_message( 'opml_imported', array( 'added' => $added ) );
 		}
+
+		if ( 'export_settings' === $action ) {
+			$this->export_settings(); // Outputs file and exits.
+		}
+
+		if ( 'import_settings' === $action ) {
+			$ok = $this->import_settings_file();
+			$this->redirect_with_message( $ok ? 'settings_imported' : 'settings_import_failed' );
+		}
 	}
 
 	/**
@@ -258,6 +267,32 @@ class WRA_Admin {
 							</p>
 							<button type="submit" class="button"><?php esc_html_e( 'Import OPML', 'curated-rss-aggregator' ); ?></button>
 						</form>
+					</details>
+
+					<details class="wra-settings-io" style="margin-top:16px;">
+						<summary style="cursor:pointer;font-weight:600;"><?php esc_html_e( 'Export / Import Settings', 'curated-rss-aggregator' ); ?></summary>
+						<div style="margin-top:12px;display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;">
+							<div>
+								<form method="post">
+									<?php wp_nonce_field( 'wra_admin_action' ); ?>
+									<input type="hidden" name="wra_action" value="export_settings">
+									<button type="submit" class="button"><?php esc_html_e( 'Export to JSON', 'curated-rss-aggregator' ); ?></button>
+								</form>
+								<p class="description" style="margin-top:6px;"><?php esc_html_e( 'Downloads all settings and import jobs. API key is excluded.', 'curated-rss-aggregator' ); ?></p>
+							</div>
+							<div>
+								<form method="post" enctype="multipart/form-data">
+									<?php wp_nonce_field( 'wra_admin_action' ); ?>
+									<input type="hidden" name="wra_action" value="import_settings">
+									<p style="margin-top:0;">
+										<label for="wra-settings-file"><?php esc_html_e( 'JSON file', 'curated-rss-aggregator' ); ?></label>
+										<input id="wra-settings-file" type="file" name="settings_file" accept=".json">
+									</p>
+									<button type="submit" class="button"><?php esc_html_e( 'Import from JSON', 'curated-rss-aggregator' ); ?></button>
+								</form>
+								<p class="description" style="margin-top:6px;"><?php esc_html_e( 'Merges settings and jobs. Existing API key is kept unless the file contains one.', 'curated-rss-aggregator' ); ?></p>
+							</div>
+						</div>
 					</details>
 				</section>
 
@@ -425,6 +460,7 @@ class WRA_Admin {
 								<th><?php esc_html_e( 'Time', 'curated-rss-aggregator' ); ?></th>
 								<th><?php esc_html_e( 'Imported', 'curated-rss-aggregator' ); ?></th>
 								<th><?php esc_html_e( 'Skipped', 'curated-rss-aggregator' ); ?></th>
+								<th><?php esc_html_e( 'Warnings', 'curated-rss-aggregator' ); ?></th>
 							</tr>
 						</thead>
 						<tbody>
@@ -433,6 +469,20 @@ class WRA_Admin {
 									<td><?php echo esc_html( date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), strtotime( $entry['time'] ) ) ); ?></td>
 									<td><?php echo esc_html( $entry['imported'] ); ?></td>
 									<td><?php echo esc_html( $entry['skipped'] ); ?></td>
+									<td>
+										<?php
+										$warnings = ! empty( $entry['warnings'] ) ? (array) $entry['warnings'] : array();
+										if ( empty( $warnings ) ) {
+											echo '&mdash;';
+										} else {
+											echo '<details><summary>' . esc_html( count( $warnings ) ) . '</summary><ul style="margin:.4em 0 0 1.2em;padding:0;">';
+											foreach ( $warnings as $w ) {
+												echo '<li>' . esc_html( $w ) . '</li>';
+											}
+											echo '</ul></details>';
+										}
+										?>
+									</td>
 								</tr>
 							<?php endforeach; ?>
 						</tbody>
@@ -594,6 +644,11 @@ class WRA_Admin {
 				_n( 'OPML imported. %d feed URL added.', 'OPML imported. %d feed URLs added.', $added, 'curated-rss-aggregator' ),
 				$added
 			);
+		} elseif ( 'settings_imported' === $message ) {
+			$text = __( 'Settings imported successfully.', 'curated-rss-aggregator' );
+		} elseif ( 'settings_import_failed' === $message ) {
+			printf( '<div class="notice notice-error is-dismissible"><p>%s</p></div>', esc_html__( 'Settings import failed. Please verify the JSON file and try again.', 'curated-rss-aggregator' ) );
+			return;
 		}
 
 		printf( '<div class="notice notice-success is-dismissible"><p>%s</p></div>', esc_html( $text ) );
@@ -730,7 +785,25 @@ class WRA_Admin {
 			return 0;
 		}
 
-		$urls = $this->parse_opml_urls( $_FILES['opml_file']['tmp_name'] );
+		// Reject failed or missing uploads.
+		$upload_error = isset( $_FILES['opml_file']['error'] ) ? (int) $_FILES['opml_file']['error'] : UPLOAD_ERR_NO_FILE;
+		if ( UPLOAD_ERR_OK !== $upload_error ) {
+			return 0;
+		}
+
+		$tmp = isset( $_FILES['opml_file']['tmp_name'] ) ? wp_unslash( $_FILES['opml_file']['tmp_name'] ) : '';
+		if ( ! is_uploaded_file( $tmp ) ) {
+			return 0;
+		}
+
+		// Only accept .opml and .xml file extensions.
+		$original_name = isset( $_FILES['opml_file']['name'] ) ? sanitize_file_name( wp_unslash( $_FILES['opml_file']['name'] ) ) : '';
+		$ext           = strtolower( pathinfo( $original_name, PATHINFO_EXTENSION ) );
+		if ( ! in_array( $ext, array( 'opml', 'xml' ), true ) ) {
+			return 0;
+		}
+
+		$urls = $this->parse_opml_urls( $tmp );
 		if ( empty( $urls ) ) {
 			return 0;
 		}
@@ -790,6 +863,99 @@ class WRA_Admin {
 				$this->extract_opml_urls( $outline, $urls );
 			}
 		}
+	}
+
+	/**
+	 * Output all settings and jobs as a downloadable JSON file.
+	 *
+	 * Strips the AI API key before export. Exits after sending.
+	 */
+	private function export_settings() {
+		$settings                  = WRA_Plugin::get_settings();
+		$settings['ai_api_key']    = ''; // Never export credentials.
+
+		$export = array(
+			'plugin'   => 'curated-rss-aggregator',
+			'version'  => WRA_VERSION,
+			'exported' => gmdate( 'c' ),
+			'settings' => $settings,
+			'jobs'     => WRA_Plugin::get_import_jobs(),
+		);
+
+		$filename = 'wra-settings-' . gmdate( 'Y-m-d' ) . '.json';
+		header( 'Content-Type: application/json; charset=utf-8' );
+		header( 'Content-Disposition: attachment; filename="' . sanitize_file_name( $filename ) . '"' );
+		header( 'Cache-Control: no-store, no-cache, must-revalidate' );
+		header( 'Pragma: no-cache' );
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON-encoded plugin data.
+		echo wp_json_encode( $export, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
+		exit;
+	}
+
+	/**
+	 * Import settings and jobs from an uploaded JSON file.
+	 *
+	 * Merges into existing config; preserves the current API key when the export
+	 * omitted it (which it always does).
+	 *
+	 * @return bool True on success, false on any validation or parse failure.
+	 */
+	private function import_settings_file() {
+		if ( empty( $_FILES['settings_file']['tmp_name'] ) ) {
+			return false;
+		}
+
+		$upload_error = isset( $_FILES['settings_file']['error'] ) ? (int) $_FILES['settings_file']['error'] : UPLOAD_ERR_NO_FILE;
+		if ( UPLOAD_ERR_OK !== $upload_error ) {
+			return false;
+		}
+
+		$tmp = isset( $_FILES['settings_file']['tmp_name'] ) ? wp_unslash( $_FILES['settings_file']['tmp_name'] ) : '';
+		if ( ! is_uploaded_file( $tmp ) ) {
+			return false;
+		}
+
+		$original_name = isset( $_FILES['settings_file']['name'] ) ? sanitize_file_name( wp_unslash( $_FILES['settings_file']['name'] ) ) : '';
+		if ( 'json' !== strtolower( pathinfo( $original_name, PATHINFO_EXTENSION ) ) ) {
+			return false;
+		}
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- reading a local tmp file.
+		$raw = file_get_contents( $tmp );
+		if ( false === $raw ) {
+			return false;
+		}
+
+		$data = json_decode( $raw, true );
+		if ( ! is_array( $data ) || empty( $data['settings'] ) || ! is_array( $data['settings'] ) ) {
+			return false;
+		}
+
+		// Merge settings, keeping the existing API key if the export omitted it.
+		$new_settings = $this->sanitize_settings( $data['settings'] );
+		update_option( WRA_Plugin::SETTINGS_OPTION, $new_settings );
+
+		// Merge jobs (imported jobs are added or overwrite by ID; existing jobs not in the
+		// file are left untouched, and their run logs are always preserved).
+		if ( ! empty( $data['jobs'] ) && is_array( $data['jobs'] ) ) {
+			$existing_jobs = WRA_Plugin::get_import_jobs();
+			foreach ( $data['jobs'] as $raw_id => $raw_job ) {
+				$job_id = sanitize_key( (string) $raw_id );
+				if ( empty( $job_id ) || ! is_array( $raw_job ) ) {
+					continue;
+				}
+				$raw_job['id'] = $job_id;
+				$sanitized     = $this->sanitize_job( $raw_job, $job_id );
+				// Keep the existing run log if this job already exists on the site.
+				if ( isset( $existing_jobs[ $job_id ]['log'] ) ) {
+					$sanitized['log'] = $existing_jobs[ $job_id ]['log'];
+				}
+				$existing_jobs[ $job_id ] = $sanitized;
+			}
+			update_option( WRA_Plugin::IMPORTS_OPTION, $existing_jobs );
+		}
+
+		return true;
 	}
 
 	/**

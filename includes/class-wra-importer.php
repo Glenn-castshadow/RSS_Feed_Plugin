@@ -68,12 +68,14 @@ class WRA_Importer {
 	 * Run a single import job.
 	 *
 	 * @param array $job Job config.
-	 * @return array { imported: int, skipped: int }
+	 * @return array { imported: int, skipped: int, warnings: string[] }
 	 */
 	public function run_job( $job ) {
-		$settings = WRA_Plugin::get_settings();
-		$urls     = array_filter( array_map( 'trim', preg_split( '/[\r\n,]+/', (string) $job['feeds'] ) ) );
-		$items    = $this->fetcher->get_items(
+		$settings    = WRA_Plugin::get_settings();
+		$urls        = array_filter( array_map( 'trim', preg_split( '/[\r\n,]+/', (string) $job['feeds'] ) ) );
+		$feed_errors = array();
+
+		$items = $this->fetcher->get_items(
 			$urls,
 			array(
 				'limit'            => absint( $job['limit'] ),
@@ -86,7 +88,8 @@ class WRA_Importer {
 				'affiliate_name'   => $settings['affiliate_name'],
 				'affiliate_value'  => $settings['affiliate_value'],
 				'amazon_tag'       => $settings['amazon_tag'],
-			)
+			),
+			$feed_errors
 		);
 
 		$amazon_tag = isset( $settings['amazon_tag'] ) ? $settings['amazon_tag'] : '';
@@ -94,7 +97,13 @@ class WRA_Importer {
 		$result = array(
 			'imported' => 0,
 			'skipped'  => 0,
+			'warnings' => array(),
 		);
+
+		// Seed warnings with any feed-fetch failures.
+		foreach ( $feed_errors as $url => $message ) {
+			$result['warnings'][] = sprintf( 'Feed fetch failed (%s): %s', $url, $message );
+		}
 
 		foreach ( $items as $item ) {
 			if ( $this->item_exists( $item['guid'], $item['link'] ) ) {
@@ -102,25 +111,32 @@ class WRA_Importer {
 				continue;
 			}
 
-			$post_id = $this->insert_item( $item, $job, $amazon_tag );
-			if ( $post_id ) {
+			$inserted = $this->insert_item( $item, $job, $amazon_tag );
+			if ( $inserted['post_id'] ) {
 				$result['imported']++;
 			} else {
 				$result['skipped']++;
 			}
+
+			if ( ! empty( $inserted['warnings'] ) ) {
+				$result['warnings'] = array_merge( $result['warnings'], $inserted['warnings'] );
+			}
 		}
 
 		// Append a log entry to this job (newest first, capped at 20).
+		// Re-fetch from DB right before writing to shrink the concurrent-write race window.
 		if ( ! empty( $job['id'] ) ) {
+			wp_cache_delete( WRA_Plugin::IMPORTS_OPTION, 'options' );
 			$all_jobs = WRA_Plugin::get_import_jobs();
 			if ( isset( $all_jobs[ $job['id'] ] ) ) {
-				$log   = isset( $all_jobs[ $job['id'] ]['log'] ) ? (array) $all_jobs[ $job['id'] ]['log'] : array();
+				$log = isset( $all_jobs[ $job['id'] ]['log'] ) ? (array) $all_jobs[ $job['id'] ]['log'] : array();
 				array_unshift(
 					$log,
 					array(
 						'time'     => current_time( 'mysql' ),
 						'imported' => $result['imported'],
 						'skipped'  => $result['skipped'],
+						'warnings' => array_slice( $result['warnings'], 0, 20 ),
 					)
 				);
 				$all_jobs[ $job['id'] ]['log'] = array_slice( $log, 0, 20 );
@@ -167,19 +183,25 @@ class WRA_Importer {
 	 *
 	 * Content pipeline: feed content → full-text extraction (optional) → AI rewrite/summarize (optional).
 	 *
-	 * @param array $item Feed item.
-	 * @param array $job  Job config.
-	 * @return int Post ID, or 0 on failure.
+	 * @param array  $item       Feed item.
+	 * @param array  $job        Job config.
+	 * @param string $amazon_tag Amazon Associates tag.
+	 * @return array { post_id: int, warnings: string[] }
 	 */
 	private function insert_item( $item, $job, $amazon_tag = '' ) {
+		$warnings = array();
+
 		// Start with feed content.
 		$content = ! empty( $job['use_full_content'] ) ? $item['content'] : wpautop( esc_html( $item['excerpt'] ) );
 
 		// Full-text extraction fetches the source article body.
 		if ( ! empty( $job['full_text_extraction'] ) && null !== $this->extractor ) {
-			$extracted = $this->extractor->extract( $item['link'] );
+			$extract_error = null;
+			$extracted     = $this->extractor->extract( $item['link'], 15, $extract_error );
 			if ( ! empty( $extracted ) ) {
 				$content = $extracted;
+			} elseif ( null !== $extract_error ) {
+				$warnings[] = sprintf( 'Full-text extraction failed for "%s": %s', $item['link'], $extract_error );
 			}
 		}
 
@@ -187,7 +209,11 @@ class WRA_Importer {
 		$ai_mode = isset( $job['ai_mode'] ) ? $job['ai_mode'] : 'none';
 		if ( 'none' !== $ai_mode && null !== $this->ai_rewriter ) {
 			$ai_prompt = isset( $job['ai_prompt'] ) ? $job['ai_prompt'] : '';
-			$content   = $this->ai_rewriter->process( $content, $item['title'], $ai_mode, $ai_prompt );
+			$ai_error  = null;
+			$content   = $this->ai_rewriter->process( $content, $item['title'], $ai_mode, $ai_prompt, $ai_error );
+			if ( null !== $ai_error ) {
+				$warnings[] = sprintf( 'AI %s failed for "%s": %s', $ai_mode, $item['title'], $ai_error );
+			}
 		}
 
 		// Rewrite Amazon links in the assembled content.
@@ -214,7 +240,8 @@ class WRA_Importer {
 		);
 
 		if ( is_wp_error( $post_id ) ) {
-			return 0;
+			$warnings[] = sprintf( 'wp_insert_post failed for "%s": %s', $item['title'], $post_id->get_error_message() );
+			return array( 'post_id' => 0, 'warnings' => $warnings );
 		}
 
 		update_post_meta( $post_id, '_wra_source_guid', $item['guid'] );
@@ -236,7 +263,7 @@ class WRA_Importer {
 			$this->set_featured_image_from_url( $post_id, $item['image'] );
 		}
 
-		return (int) $post_id;
+		return array( 'post_id' => (int) $post_id, 'warnings' => $warnings );
 	}
 
 	/**
@@ -262,7 +289,7 @@ class WRA_Importer {
 
 		$attachment_id = media_handle_sideload( $file, $post_id );
 		if ( is_wp_error( $attachment_id ) ) {
-			@unlink( $tmp ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+			wp_delete_file( $tmp );
 			return;
 		}
 

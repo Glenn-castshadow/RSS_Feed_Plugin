@@ -43,11 +43,12 @@ class WRA_Full_Text_Extractor {
 	 *
 	 * Returns an empty string on failure so callers can fall back to feed content.
 	 *
-	 * @param string $url     Source URL.
-	 * @param int    $timeout HTTP timeout in seconds.
-	 * @return string Sanitized HTML content.
+	 * @param string      $url     Source URL.
+	 * @param int         $timeout HTTP timeout in seconds.
+	 * @param string|null $error   Optional. Set to an error message string on failure.
+	 * @return string Sanitized HTML content, or empty string on failure.
 	 */
-	public function extract( $url, $timeout = 15 ) {
+	public function extract( $url, $timeout = 15, &$error = null ) {
 		$response = wp_remote_get(
 			$url,
 			array(
@@ -59,7 +60,13 @@ class WRA_Full_Text_Extractor {
 			)
 		);
 
-		if ( is_wp_error( $response ) || 200 !== (int) wp_remote_retrieve_response_code( $response ) ) {
+		if ( is_wp_error( $response ) ) {
+			$error = $response->get_error_message();
+			return '';
+		}
+
+		if ( 200 !== (int) wp_remote_retrieve_response_code( $response ) ) {
+			$error = sprintf( 'HTTP %d', (int) wp_remote_retrieve_response_code( $response ) );
 			return '';
 		}
 

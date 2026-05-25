@@ -30,9 +30,7 @@
 			return;
 		}
 
-		var originalText = btn.textContent;
-		btn.disabled     = true;
-		btn.textContent  = originalText; // keep label, disable handles visual state
+		btn.disabled = true;
 
 		var body = new URLSearchParams();
 		body.append( 'action', 'wra_load_more' );
@@ -55,6 +53,9 @@
 					return;
 				}
 
+				// Record the index of the first new child before inserting.
+				var firstNewIndex = feed.children.length;
+
 				var tmp = document.createElement( 'div' );
 				tmp.innerHTML = resp.data.html;
 				while ( tmp.firstChild ) {
@@ -62,6 +63,23 @@
 				}
 
 				wrap.setAttribute( 'data-wra-offset', offset + params.items );
+
+				// Move focus to the first newly appended article so keyboard and
+				// screen-reader users land in the new content immediately.
+				var firstNew = feed.children[ firstNewIndex ];
+				if ( firstNew ) {
+					firstNew.setAttribute( 'tabindex', '-1' );
+					firstNew.focus();
+				}
+
+				// Announce the count via the aria-live region.
+				var loaded    = feed.children.length - firstNewIndex;
+				var announcer = container.querySelector( '.wra-announcer' );
+				if ( announcer && loaded > 0 ) {
+					// Clear first so identical text still triggers the announcement.
+					announcer.textContent = '';
+					announcer.textContent = ( wra_public.items_loaded || '%d more items loaded.' ).replace( '%d', loaded );
+				}
 
 				if ( resp.data.has_more ) {
 					btn.disabled = false;

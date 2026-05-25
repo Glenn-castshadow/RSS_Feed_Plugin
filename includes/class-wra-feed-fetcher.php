@@ -20,11 +20,12 @@ class WRA_Feed_Fetcher {
 	/**
 	 * Fetch feed items from one or more URLs.
 	 *
-	 * @param array $urls Feed URLs.
-	 * @param array $args Fetch args.
+	 * @param array  $urls        Feed URLs.
+	 * @param array  $args        Fetch args.
+	 * @param array  $feed_errors Optional. Populated with [ url => error_message ] for each failed feed.
 	 * @return array
 	 */
-	public function get_items( $urls, $args = array() ) {
+	public function get_items( $urls, $args = array(), &$feed_errors = array() ) {
 		$args = wp_parse_args(
 			$args,
 			array(
@@ -59,6 +60,7 @@ class WRA_Feed_Fetcher {
 			$feed = fetch_feed( $url );
 
 			if ( is_wp_error( $feed ) ) {
+				$feed_errors[ $url ] = $feed->get_error_message();
 				continue;
 			}
 
@@ -230,7 +232,7 @@ class WRA_Feed_Fetcher {
 			return $enclosure->get_link();
 		}
 
-		$thumbnail = $item->get_item_tags( SIMPLEPIE_NAMESPACE_MEDIARSS, 'thumbnail' );
+		$thumbnail = $item->get_item_tags( 'http://search.yahoo.com/mrss/', 'thumbnail' );
 		if ( ! empty( $thumbnail[0]['attribs']['']['url'] ) ) {
 			return $thumbnail[0]['attribs']['']['url'];
 		}

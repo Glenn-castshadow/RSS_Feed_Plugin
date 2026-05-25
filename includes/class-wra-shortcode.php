@@ -39,7 +39,9 @@ class WRA_Shortcode {
 			'wra-public',
 			'wra_public',
 			array(
-				'ajax_url' => admin_url( 'admin-ajax.php' ),
+				'ajax_url'     => admin_url( 'admin-ajax.php' ),
+				/* translators: %d: number of new items appended to the feed */
+				'items_loaded' => __( '%d more items loaded.', 'curated-rss-aggregator' ),
 			)
 		);
 	}
@@ -141,6 +143,8 @@ class WRA_Shortcode {
 
 		if ( $show_load_more ) {
 			$output .= '<div class="wra-load-more-container">';
+			// Visually hidden; updated by JS to announce how many items loaded.
+			$output .= '<div class="wra-announcer" aria-live="polite" aria-atomic="true"></div>';
 		}
 
 		$output .= '<div class="' . esc_attr( implode( ' ', $wrapper_classes ) ) . '"' . $wrapper_style; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
