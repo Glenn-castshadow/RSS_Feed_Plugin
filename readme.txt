@@ -3,7 +3,7 @@ Contributors: castshadow
 Tags: rss, feed, aggregator, news, import
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 1.0.0
+Stable tag: 1.1.0
 Requires PHP: 7.4
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -18,6 +18,7 @@ Curated RSS Aggregator lets you pull multiple RSS/Atom feeds into a clean, respo
 
 * Grid, list, and compact layouts with five card style variants
 * Per-feed item limits to balance sources across multiple feeds
+* Feed diversity spreading — same-source articles are separated so no two appear side by side when alternatives exist
 * Keyword include/exclude filtering (matches title and content)
 * Affiliate/referral query parameter injection on all feed links
 * Amazon Associates tag rewriting for product URLs
@@ -77,6 +78,10 @@ Use the Export / Import Settings panel (collapsed under the Display Feeds sectio
 
 == Changelog ==
 
+= 1.1.0 =
+* Added feed diversity spreading — articles from the same source feed are automatically interleaved so no two appear side by side when items from other feeds are available.
+* Added GitHub-based automatic updates — the plugin checks for new releases and integrates with the standard WordPress one-click upgrader.
+
 = 1.0.0 =
 * Added settings export and import (JSON) for environment migrations.
 * Added warnings column to import job run history — feed errors, extraction failures, and AI errors are now logged.
@@ -110,6 +115,9 @@ Use the Export / Import Settings panel (collapsed under the Display Feeds sectio
 * Added full-text extraction from source article URLs.
 
 == Upgrade Notice ==
+
+= 1.1.0 =
+Adds feed diversity spreading and GitHub-based auto-updates. No database changes required.
 
 = 1.0.0 =
 Improved error visibility in import job logs and accessibility improvements for the Load More button. No database changes required.

@@ -2,7 +2,7 @@
 
 A WordPress plugin for displaying and importing RSS feeds. Show feeds anywhere with a shortcode or Gutenberg block, filter by keyword, limit items per source, and optionally import feed items as WordPress posts — with optional full-text extraction and AI rewrite/summarize.
 
-**Current version:** 1.0.0
+**Current version:** 1.1.0
 
 ---
 
@@ -14,6 +14,7 @@ A WordPress plugin for displaying and importing RSS feeds. Show feeds anywhere w
 - Configurable column count, image aspect ratio, and card style
 - Show/hide image, date, source domain, author, excerpt, and "Read more" link
 - Per-feed item cap — prevents one high-volume feed from filling all slots
+- Feed diversity spreading — articles from the same source are separated in the display order so no two appear side by side when alternatives exist
 - Character limit on excerpts
 - Keyword include/exclude filters
 - Referral/affiliate query parameters appended to outbound links
@@ -39,7 +40,7 @@ A WordPress plugin for displaying and importing RSS feeds. Show feeds anywhere w
 
 ### From the zip (recommended)
 
-1. Download `curated-rss-aggregator-1.0.0.zip` from the `dist/` folder or a GitHub release.
+1. Download `curated-rss-aggregator-1.1.0.zip` from the `dist/` folder or a GitHub release.
 2. In WordPress go to **Plugins → Add New → Upload Plugin**.
 3. Upload the zip and click **Install Now**, then **Activate**.
 4. Open **RSS Aggregator** in the WordPress admin sidebar.
@@ -56,10 +57,10 @@ A WordPress plugin for displaying and importing RSS feeds. Show feeds anywhere w
 From the repository root on Windows (PowerShell):
 
 ```powershell
-.\scripts\build-plugin.ps1 -Version "1.0.0"
+.\scripts\build-plugin.ps1 -Version "1.1.0"
 ```
 
-The zip is written to `dist/curated-rss-aggregator-1.0.0.zip`.  
+The zip is written to `dist/curated-rss-aggregator-1.1.0.zip`.  
 Omit `-Version` to produce `dist/curated-rss-aggregator.zip`.
 
 > **Note:** The build script uses .NET's `ZipArchive` directly to ensure zip entry paths use forward slashes. PowerShell's `Compress-Archive` writes Windows backslashes, which breaks PHP's `ZipArchive` extraction on Linux servers.
@@ -210,3 +211,11 @@ Under **Display Feeds → Referral Parameters**, set a global query name and val
 - WordPress 6.0+
 - PHP 7.4+
 - No external dependencies beyond WordPress core
+
+---
+
+## Automatic updates
+
+The plugin checks the [GitHub releases page](https://github.com/Glenn-castshadow/RSS_Feed_Plugin/releases) for newer versions. When a release tagged `v1.x.x` is published that is newer than the installed version, WordPress will show an "Update Available" notice in the Plugins list — click **Update Now** to install it through the standard WordPress upgrader.
+
+The GitHub repository must be public for update checks to work. Release check results are cached for 12 hours.

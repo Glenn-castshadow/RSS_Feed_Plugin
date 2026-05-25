@@ -90,6 +90,8 @@ class WRA_Feed_Fetcher {
 			}
 		);
 
+		$items = $this->spread_items_by_feed( $items );
+
 		$limit    = max( 1, absint( $args['limit'] ) );
 		$offset   = max( 0, absint( $args['offset'] ) );
 		$per_feed = absint( $args['per_feed'] );
@@ -126,6 +128,47 @@ class WRA_Feed_Fetcher {
 	 */
 	public function filter_cache_lifetime() {
 		return isset( $this->cache_lifetime ) ? (int) $this->cache_lifetime : HOUR_IN_SECONDS;
+	}
+
+	/**
+	 * Reorder items so no two adjacent entries share the same source feed.
+	 *
+	 * Greedy pass: for each slot, pick the chronologically-next item whose
+	 * source_feed differs from the previous slot.  When all remaining items
+	 * share the same feed (unavoidable adjacency), take the next one in order.
+	 *
+	 * @param array $items Chronologically-sorted items.
+	 * @return array
+	 */
+	private function spread_items_by_feed( $items ) {
+		if ( count( $items ) <= 1 ) {
+			return $items;
+		}
+
+		$result    = array();
+		$remaining = $items;
+
+		while ( ! empty( $remaining ) ) {
+			$last_feed = empty( $result ) ? null : end( $result )['source_feed'];
+			$placed    = false;
+
+			foreach ( $remaining as $key => $item ) {
+				if ( $item['source_feed'] !== $last_feed ) {
+					$result[]  = $item;
+					unset( $remaining[ $key ] );
+					$remaining = array_values( $remaining );
+					$placed    = true;
+					break;
+				}
+			}
+
+			// All remaining items are from the same feed — adjacency unavoidable.
+			if ( ! $placed ) {
+				$result[] = array_shift( $remaining );
+			}
+		}
+
+		return $result;
 	}
 
 	/**
