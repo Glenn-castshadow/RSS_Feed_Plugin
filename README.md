@@ -2,7 +2,7 @@
 
 A WordPress plugin for displaying and importing RSS feeds. Show feeds anywhere with a shortcode or Gutenberg block, filter by keyword, limit items per source, and optionally import feed items as WordPress posts — with optional full-text extraction and AI rewrite/summarize.
 
-**Current version:** 0.6.0
+**Current version:** 1.0.0
 
 ---
 
@@ -39,7 +39,7 @@ A WordPress plugin for displaying and importing RSS feeds. Show feeds anywhere w
 
 ### From the zip (recommended)
 
-1. Download `curated-rss-aggregator-0.6.0.zip` from the `dist/` folder or a GitHub release.
+1. Download `curated-rss-aggregator-1.0.0.zip` from the `dist/` folder or a GitHub release.
 2. In WordPress go to **Plugins → Add New → Upload Plugin**.
 3. Upload the zip and click **Install Now**, then **Activate**.
 4. Open **RSS Aggregator** in the WordPress admin sidebar.
@@ -56,10 +56,10 @@ A WordPress plugin for displaying and importing RSS feeds. Show feeds anywhere w
 From the repository root on Windows (PowerShell):
 
 ```powershell
-.\scripts\build-plugin.ps1 -Version "0.6.0"
+.\scripts\build-plugin.ps1 -Version "1.0.0"
 ```
 
-The zip is written to `dist/curated-rss-aggregator-0.6.0.zip`.  
+The zip is written to `dist/curated-rss-aggregator-1.0.0.zip`.  
 Omit `-Version` to produce `dist/curated-rss-aggregator.zip`.
 
 > **Note:** The build script uses .NET's `ZipArchive` directly to ensure zip entry paths use forward slashes. PowerShell's `Compress-Archive` writes Windows backslashes, which breaks PHP's `ZipArchive` extraction on Linux servers.
@@ -207,6 +207,6 @@ Under **Display Feeds → Referral Parameters**, set a global query name and val
 
 ## Requirements
 
-- WordPress 5.8+
-- PHP 7.2+
+- WordPress 6.0+
+- PHP 7.4+
 - No external dependencies beyond WordPress core
