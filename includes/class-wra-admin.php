@@ -197,6 +197,7 @@ class WRA_Admin {
 							<tr><td><code>card_style</code></td><td>default · shadow · flat · outline · none <em>(default)</em></td></tr>
 							<tr><td><code>image_ratio</code></td><td>16-9 · 4-3 · 3-2 · 1-1 <em>(16-9)</em></td></tr>
 							<tr><td><code>items</code></td><td>integer <em>(6)</em></td></tr>
+							<tr><td><code>per_feed</code></td><td>integer, 0 = no limit <em>(0)</em></td></tr>
 							<tr><td><code>show_image</code></td><td>yes · no <em>(yes)</em></td></tr>
 							<tr><td><code>show_date</code></td><td>yes · no <em>(yes)</em></td></tr>
 							<tr><td><code>show_source</code></td><td>yes · no <em>(no)</em></td></tr>

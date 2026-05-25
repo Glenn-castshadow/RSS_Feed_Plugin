@@ -29,6 +29,7 @@ class WRA_Feed_Fetcher {
 			$args,
 			array(
 				'limit'            => 10,
+				'per_feed'         => 0,
 				'cache_minutes'    => 60,
 				'include_keywords' => '',
 				'exclude_keywords' => '',
@@ -59,7 +60,12 @@ class WRA_Feed_Fetcher {
 				continue;
 			}
 
-			$max_items = $feed->get_item_quantity( max( 1, absint( $args['limit'] ) ) );
+			// When per_feed is set, fetch enough items per feed to fill the cap even
+			// if some are filtered out. Without it, just cap at the total limit.
+			$fetch_per_feed = absint( $args['per_feed'] ) > 0
+				? max( absint( $args['limit'] ), absint( $args['per_feed'] ) * 3 )
+				: max( 1, absint( $args['limit'] ) );
+			$max_items = $feed->get_item_quantity( $fetch_per_feed );
 			foreach ( $feed->get_items( 0, $max_items ) as $item ) {
 				$normalized = $this->normalize_item( $item, $url, $args );
 
@@ -78,7 +84,31 @@ class WRA_Feed_Fetcher {
 			}
 		);
 
-		return array_slice( $items, 0, max( 1, absint( $args['limit'] ) ) );
+		$limit    = max( 1, absint( $args['limit'] ) );
+		$per_feed = absint( $args['per_feed'] );
+
+		if ( 0 === $per_feed ) {
+			return array_slice( $items, 0, $limit );
+		}
+
+		// Walk the date-sorted list and take at most $per_feed items from each source.
+		$result      = array();
+		$feed_counts = array();
+		foreach ( $items as $item ) {
+			$src = $item['source_feed'];
+			if ( ! isset( $feed_counts[ $src ] ) ) {
+				$feed_counts[ $src ] = 0;
+			}
+			if ( $feed_counts[ $src ] < $per_feed ) {
+				$result[] = $item;
+				$feed_counts[ $src ]++;
+				if ( count( $result ) >= $limit ) {
+					break;
+				}
+			}
+		}
+
+		return $result;
 	}
 
 	/**

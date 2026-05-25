@@ -48,6 +48,7 @@ class WRA_Shortcode {
 			array(
 				'feeds'            => $settings['feeds'],
 				'items'            => 6,
+				'per_feed'         => 0,
 				'layout'           => 'grid',
 				'columns'          => 0,
 				'image_ratio'      => '16-9',
@@ -74,6 +75,7 @@ class WRA_Shortcode {
 			$urls,
 			array(
 				'limit'            => absint( $atts['items'] ),
+				'per_feed'         => absint( $atts['per_feed'] ),
 				'cache_minutes'    => absint( $settings['cache_minutes'] ),
 				'fallback_image'   => $settings['fallback_image'],
 				'include_keywords' => sanitize_text_field( $atts['include_keywords'] ),

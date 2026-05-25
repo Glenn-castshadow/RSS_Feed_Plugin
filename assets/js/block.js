@@ -42,6 +42,14 @@
 							onChange: function ( v ) { set( { items: v } ); },
 							min: 1,
 							max: 24,
+						} ),
+						el( TextControl, {
+							label: __( 'Max per feed', 'curated-rss-aggregator' ),
+							type: 'number',
+							value: String( atts.per_feed ),
+							onChange: function ( v ) { set( { per_feed: Math.max( 0, parseInt( v, 10 ) || 0 ) } ); },
+							min: '0',
+							help: __( '0 = no limit. Prevents one active feed from filling all slots.', 'curated-rss-aggregator' ),
 						} )
 					),
 
