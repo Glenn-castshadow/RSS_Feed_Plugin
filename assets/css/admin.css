@@ -72,6 +72,15 @@
 	margin: 0;
 }
 
+.wra-log {
+	margin-top: 16px;
+}
+
+.wra-log summary {
+	cursor: pointer;
+	font-weight: 600;
+}
+
 @media (max-width: 900px) {
 	.wra-admin__grid {
 		grid-template-columns: 1fr;

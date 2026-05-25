@@ -285,6 +285,24 @@ class WRA_Admin {
 							<label for="wra-before"><?php esc_html_e( 'Date before', 'curated-rss-aggregator' ); ?></label>
 							<input id="wra-before" type="date" name="date_before" value="<?php echo esc_attr( $edit_job ? $edit_job['date_before'] : '' ); ?>">
 						</p>
+						<p>
+							<label for="wra-job-category"><?php esc_html_e( 'Category', 'curated-rss-aggregator' ); ?></label>
+							<select id="wra-job-category" name="category">
+								<option value="0"><?php esc_html_e( '— None —', 'curated-rss-aggregator' ); ?></option>
+								<?php
+								$current_cat = $edit_job ? ( isset( $edit_job['category'] ) ? (int) $edit_job['category'] : 0 ) : 0;
+								foreach ( get_categories( array( 'hide_empty' => false ) ) as $cat ) :
+									?>
+									<option value="<?php echo esc_attr( $cat->term_id ); ?>" <?php selected( $current_cat, $cat->term_id ); ?>><?php echo esc_html( $cat->name ); ?></option>
+								<?php endforeach; ?>
+							</select>
+							<span class="description"><?php esc_html_e( 'Applies to the post type only if it supports the category taxonomy.', 'curated-rss-aggregator' ); ?></span>
+						</p>
+						<p>
+							<label for="wra-job-tags"><?php esc_html_e( 'Tags', 'curated-rss-aggregator' ); ?></label>
+							<input id="wra-job-tags" type="text" name="tags" value="<?php echo esc_attr( $edit_job ? ( isset( $edit_job['tags'] ) ? $edit_job['tags'] : '' ) : '' ); ?>" placeholder="bourbon, whiskey, review">
+							<span class="description"><?php esc_html_e( 'Comma-separated tag names.', 'curated-rss-aggregator' ); ?></span>
+						</p>
 					</div>
 
 					<div class="wra-checks">
@@ -313,6 +331,33 @@ class WRA_Admin {
 
 					<?php submit_button( $edit_job ? __( 'Update Job', 'curated-rss-aggregator' ) : __( 'Create Job', 'curated-rss-aggregator' ) ); ?>
 				</form>
+
+				<?php if ( $edit_job && ! empty( $edit_job['log'] ) ) : ?>
+				<details class="wra-log">
+					<summary><?php
+						/* translators: %d: number of log entries */
+						printf( esc_html( _n( 'Run history (%d entry)', 'Run history (%d entries)', count( $edit_job['log'] ), 'curated-rss-aggregator' ) ), count( $edit_job['log'] ) );
+					?></summary>
+					<table class="widefat striped" style="margin-top:8px;font-size:0.875rem;">
+						<thead>
+							<tr>
+								<th><?php esc_html_e( 'Time', 'curated-rss-aggregator' ); ?></th>
+								<th><?php esc_html_e( 'Imported', 'curated-rss-aggregator' ); ?></th>
+								<th><?php esc_html_e( 'Skipped', 'curated-rss-aggregator' ); ?></th>
+							</tr>
+						</thead>
+						<tbody>
+							<?php foreach ( $edit_job['log'] as $entry ) : ?>
+								<tr>
+									<td><?php echo esc_html( date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), strtotime( $entry['time'] ) ) ); ?></td>
+									<td><?php echo esc_html( $entry['imported'] ); ?></td>
+									<td><?php echo esc_html( $entry['skipped'] ); ?></td>
+								</tr>
+							<?php endforeach; ?>
+						</tbody>
+					</table>
+				</details>
+				<?php endif; ?>
 			</section>
 
 			<section class="wra-panel">
@@ -357,6 +402,10 @@ class WRA_Admin {
 		$valid_ai_modes = array( 'none', 'rewrite', 'summarize' );
 		$ai_mode        = isset( $data['ai_mode'] ) ? sanitize_key( wp_unslash( $data['ai_mode'] ) ) : 'none';
 
+		// Preserve the existing run log when re-saving a job.
+		$existing_jobs = WRA_Plugin::get_import_jobs();
+		$existing_log  = isset( $existing_jobs[ $job_id ]['log'] ) ? $existing_jobs[ $job_id ]['log'] : array();
+
 		return array(
 			'id'                   => $job_id,
 			'name'                 => isset( $data['name'] ) ? sanitize_text_field( wp_unslash( $data['name'] ) ) : __( 'Untitled import', 'curated-rss-aggregator' ),
@@ -364,6 +413,8 @@ class WRA_Admin {
 			'limit'                => isset( $data['limit'] ) ? max( 1, min( 50, absint( $data['limit'] ) ) ) : 10,
 			'post_status'          => isset( $data['post_status'] ) ? sanitize_key( wp_unslash( $data['post_status'] ) ) : 'draft',
 			'post_type'            => isset( $data['post_type'] ) ? sanitize_key( wp_unslash( $data['post_type'] ) ) : 'post',
+			'category'             => isset( $data['category'] ) ? absint( $data['category'] ) : 0,
+			'tags'                 => isset( $data['tags'] ) ? sanitize_text_field( wp_unslash( $data['tags'] ) ) : '',
 			'include_keywords'     => isset( $data['include_keywords'] ) ? sanitize_text_field( wp_unslash( $data['include_keywords'] ) ) : '',
 			'exclude_keywords'     => isset( $data['exclude_keywords'] ) ? sanitize_text_field( wp_unslash( $data['exclude_keywords'] ) ) : '',
 			'date_after'           => isset( $data['date_after'] ) ? sanitize_text_field( wp_unslash( $data['date_after'] ) ) : '',
@@ -375,6 +426,7 @@ class WRA_Admin {
 			'preserve_date'        => ! empty( $data['preserve_date'] ),
 			'ai_mode'              => in_array( $ai_mode, $valid_ai_modes, true ) ? $ai_mode : 'none',
 			'ai_prompt'            => isset( $data['ai_prompt'] ) ? sanitize_textarea_field( wp_unslash( $data['ai_prompt'] ) ) : '',
+			'log'                  => $existing_log,
 		);
 	}
 
@@ -469,6 +521,7 @@ class WRA_Admin {
 					<th><?php esc_html_e( 'Name', 'curated-rss-aggregator' ); ?></th>
 					<th><?php esc_html_e( 'Feeds', 'curated-rss-aggregator' ); ?></th>
 					<th><?php esc_html_e( 'Status', 'curated-rss-aggregator' ); ?></th>
+					<th><?php esc_html_e( 'Last run', 'curated-rss-aggregator' ); ?></th>
 					<th><?php esc_html_e( 'Actions', 'curated-rss-aggregator' ); ?></th>
 				</tr>
 			</thead>
@@ -478,6 +531,21 @@ class WRA_Admin {
 						<td><?php echo esc_html( $job['name'] ); ?></td>
 						<td><?php echo esc_html( wp_trim_words( str_replace( "\n", ', ', $job['feeds'] ), 12 ) ); ?></td>
 						<td><?php echo ! empty( $job['enabled'] ) ? esc_html__( 'Scheduled', 'curated-rss-aggregator' ) : esc_html__( 'Paused', 'curated-rss-aggregator' ); ?></td>
+						<td>
+							<?php
+							$last = ! empty( $job['log'] ) ? $job['log'][0] : null;
+							if ( $last ) {
+								printf(
+									'%s<br><small>%s</small>',
+									esc_html( human_time_diff( strtotime( $last['time'] ), current_time( 'timestamp' ) ) . ' ' . __( 'ago', 'curated-rss-aggregator' ) ),
+									/* translators: 1: imported count, 2: skipped count */
+									esc_html( sprintf( __( '%1$d in / %2$d sk', 'curated-rss-aggregator' ), $last['imported'], $last['skipped'] ) )
+								);
+							} else {
+								esc_html_e( 'Never', 'curated-rss-aggregator' );
+							}
+							?>
+						</td>
 						<td class="wra-actions">
 							<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=wra&edit_job=' . rawurlencode( $job['id'] ) ) ); ?>"><?php esc_html_e( 'Edit', 'curated-rss-aggregator' ); ?></a>
 							<form method="post">

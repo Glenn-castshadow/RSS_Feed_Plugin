@@ -101,6 +101,24 @@ class WRA_Importer {
 			}
 		}
 
+		// Append a log entry to this job (newest first, capped at 20).
+		if ( ! empty( $job['id'] ) ) {
+			$all_jobs = WRA_Plugin::get_import_jobs();
+			if ( isset( $all_jobs[ $job['id'] ] ) ) {
+				$log   = isset( $all_jobs[ $job['id'] ]['log'] ) ? (array) $all_jobs[ $job['id'] ]['log'] : array();
+				array_unshift(
+					$log,
+					array(
+						'time'     => current_time( 'mysql' ),
+						'imported' => $result['imported'],
+						'skipped'  => $result['skipped'],
+					)
+				);
+				$all_jobs[ $job['id'] ]['log'] = array_slice( $log, 0, 20 );
+				update_option( WRA_Plugin::IMPORTS_OPTION, $all_jobs );
+			}
+		}
+
 		return $result;
 	}
 
@@ -196,6 +214,13 @@ class WRA_Importer {
 
 		if ( ! empty( $job['category'] ) ) {
 			wp_set_post_terms( $post_id, array( absint( $job['category'] ) ), 'category', true );
+		}
+
+		if ( ! empty( $job['tags'] ) ) {
+			$tag_names = array_filter( array_map( 'trim', explode( ',', $job['tags'] ) ) );
+			if ( ! empty( $tag_names ) ) {
+				wp_set_post_terms( $post_id, $tag_names, 'post_tag', true );
+			}
 		}
 
 		if ( ! empty( $item['image'] ) && ! empty( $job['save_featured_image'] ) ) {
