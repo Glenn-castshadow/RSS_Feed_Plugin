@@ -44,8 +44,28 @@ class WRA_Plugin {
 		new WRA_Admin( self::$fetcher, $importer );
 
 		add_action( 'init', array( __CLASS__, 'register_block' ) );
+		add_action( 'elementor/widgets/register', array( __CLASS__, 'register_elementor_widget' ) );
 		add_action( self::CRON_HOOK, array( $importer, 'run_scheduled_jobs' ) );
 		add_filter( 'cron_schedules', array( __CLASS__, 'add_cron_schedules' ) );
+	}
+
+	/**
+	 * Expose the shared shortcode instance (used by the Elementor widget render callback).
+	 *
+	 * @return WRA_Shortcode
+	 */
+	public static function get_shortcode() {
+		return self::$shortcode;
+	}
+
+	/**
+	 * Register the Elementor widget when Elementor is active.
+	 *
+	 * @param \Elementor\Widgets_Manager $widgets_manager Elementor widgets manager.
+	 */
+	public static function register_elementor_widget( $widgets_manager ) {
+		require_once WRA_PLUGIN_DIR . 'includes/class-wra-elementor-widget.php';
+		$widgets_manager->register( new WRA_Elementor_Widget() );
 	}
 
 	/**
