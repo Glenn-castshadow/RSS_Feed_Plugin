@@ -57,6 +57,7 @@ class WRA_Shortcode {
 				'show_source'      => 'no',
 				'show_author'      => 'no',
 				'show_excerpt'     => 'yes',
+				'max_chars'        => 0,
 				'show_read_more'   => 'no',
 				'read_more_text'   => '',
 				'include_keywords' => '',
@@ -100,6 +101,8 @@ class WRA_Shortcode {
 		$read_more_text = ! empty( $atts['read_more_text'] )
 			? $atts['read_more_text']
 			: __( 'Read more', 'curated-rss-aggregator' );
+
+		$max_chars = absint( $atts['max_chars'] );
 
 		// Build wrapper class list.
 		$wrapper_classes = array( 'wra-feed', 'wra-feed--' . $layout );
@@ -156,7 +159,15 @@ class WRA_Shortcode {
 							</div>
 						<?php endif; ?>
 						<?php if ( 'yes' === $atts['show_excerpt'] && ! empty( $item['excerpt'] ) ) : ?>
-							<p class="wra-feed__excerpt"><?php echo esc_html( $item['excerpt'] ); ?></p>
+							<?php
+							$excerpt = $item['excerpt'];
+							if ( $max_chars > 0 && mb_strlen( $excerpt ) > $max_chars ) {
+								$trimmed    = mb_substr( $excerpt, 0, $max_chars );
+								$last_space = mb_strrpos( $trimmed, ' ' );
+								$excerpt    = ( false !== $last_space ? mb_substr( $trimmed, 0, $last_space ) : $trimmed ) . '…';
+							}
+							?>
+							<p class="wra-feed__excerpt"><?php echo esc_html( $excerpt ); ?></p>
 						<?php endif; ?>
 						<?php if ( 'yes' === $atts['show_read_more'] ) : ?>
 							<a class="wra-feed__read-more" href="<?php echo esc_url( $item['link'] ); ?>" target="_blank" rel="nofollow noopener">

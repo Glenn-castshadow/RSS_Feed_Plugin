@@ -128,6 +128,14 @@
 							checked: atts.show_excerpt,
 							onChange: function ( v ) { set( { show_excerpt: v } ); },
 						} ),
+						atts.show_excerpt && el( TextControl, {
+							label: __( 'Max excerpt characters', 'curated-rss-aggregator' ),
+							type: 'number',
+							value: String( atts.max_chars ),
+							onChange: function ( v ) { set( { max_chars: Math.max( 0, parseInt( v, 10 ) || 0 ) } ); },
+							min: '0',
+							help: __( '0 = no limit', 'curated-rss-aggregator' ),
+						} ),
 						el( ToggleControl, {
 							label: __( 'Show "Read more" link', 'curated-rss-aggregator' ),
 							checked: atts.show_read_more,

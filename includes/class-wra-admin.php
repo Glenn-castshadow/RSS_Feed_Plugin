@@ -202,6 +202,7 @@ class WRA_Admin {
 							<tr><td><code>show_source</code></td><td>yes · no <em>(no)</em></td></tr>
 							<tr><td><code>show_author</code></td><td>yes · no <em>(no)</em></td></tr>
 							<tr><td><code>show_excerpt</code></td><td>yes · no <em>(yes)</em></td></tr>
+							<tr><td><code>max_chars</code></td><td>integer, 0 = no limit <em>(0)</em></td></tr>
 							<tr><td><code>show_read_more</code></td><td>yes · no <em>(no)</em></td></tr>
 							<tr><td><code>read_more_text</code></td><td>any string <em>(Read more)</em></td></tr>
 							<tr><td><code>include_keywords</code></td><td>comma-separated</td></tr>

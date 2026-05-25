@@ -52,6 +52,10 @@
 			"type": "boolean",
 			"default": true
 		},
+		"max_chars": {
+			"type": "integer",
+			"default": 0
+		},
 		"show_read_more": {
 			"type": "boolean",
 			"default": false
