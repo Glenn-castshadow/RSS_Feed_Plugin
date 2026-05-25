@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Plugin Name: Curated RSS Aggregator
  * Description: Display RSS feeds anywhere and optionally import filtered feed items as WordPress posts.
