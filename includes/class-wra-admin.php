@@ -127,6 +127,12 @@ class WRA_Admin {
 			$this->redirect_with_message( 'cache_cleared' );
 		}
 
+		if ( 'check_for_updates' === $action ) {
+			delete_transient( WRA_GitHub_Updater::TRANSIENT );
+			delete_site_transient( 'update_plugins' );
+			$this->redirect_with_message( 'update_check_done' );
+		}
+
 		if ( 'import_opml' === $action ) {
 			$added = $this->handle_opml_import();
 			$this->redirect_with_message( 'opml_imported', array( 'added' => $added ) );
@@ -186,12 +192,20 @@ class WRA_Admin {
 				<section class="wra-panel">
 					<h2><?php esc_html_e( 'Display Feeds', 'curated-rss-aggregator' ); ?></h2>
 
-					<form method="post" style="margin-bottom:16px;">
-						<?php wp_nonce_field( 'wra_admin_action' ); ?>
-						<input type="hidden" name="wra_action" value="clear_feed_cache">
-						<button type="submit" class="button"><?php esc_html_e( 'Clear feed cache', 'curated-rss-aggregator' ); ?></button>
-						<span class="description" style="margin-left:8px;"><?php esc_html_e( 'Forces all feeds to re-fetch on next load.', 'curated-rss-aggregator' ); ?></span>
-					</form>
+					<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;">
+						<form method="post">
+							<?php wp_nonce_field( 'wra_admin_action' ); ?>
+							<input type="hidden" name="wra_action" value="clear_feed_cache">
+							<button type="submit" class="button"><?php esc_html_e( 'Clear feed cache', 'curated-rss-aggregator' ); ?></button>
+							<span class="description" style="margin-left:8px;"><?php esc_html_e( 'Forces all feeds to re-fetch on next load.', 'curated-rss-aggregator' ); ?></span>
+						</form>
+						<form method="post">
+							<?php wp_nonce_field( 'wra_admin_action' ); ?>
+							<input type="hidden" name="wra_action" value="check_for_updates">
+							<button type="submit" class="button"><?php esc_html_e( 'Check for updates', 'curated-rss-aggregator' ); ?></button>
+							<span class="description" style="margin-left:8px;"><?php esc_html_e( 'Clears the cached GitHub release info and forces WordPress to re-check for a plugin update.', 'curated-rss-aggregator' ); ?></span>
+						</form>
+					</div>
 
 					<form method="post">
 						<?php wp_nonce_field( 'wra_admin_action' ); ?>
@@ -770,6 +784,8 @@ class WRA_Admin {
 				_n( 'OPML imported. %d feed URL added.', 'OPML imported. %d feed URLs added.', $added, 'curated-rss-aggregator' ),
 				$added
 			);
+		} elseif ( 'update_check_done' === $message ) {
+			$text = __( 'Update cache cleared. WordPress will re-check for plugin updates.', 'curated-rss-aggregator' );
 		} elseif ( 'feed_list_saved' === $message ) {
 			$text = __( 'Feed list saved.', 'curated-rss-aggregator' );
 		} elseif ( 'feed_list_deleted' === $message ) {
