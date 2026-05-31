@@ -140,16 +140,43 @@ class WRA_Admin {
 			$ok = $this->import_settings_file();
 			$this->redirect_with_message( $ok ? 'settings_imported' : 'settings_import_failed' );
 		}
+
+		if ( 'save_feed_list' === $action ) {
+			$lists   = WRA_Plugin::get_feed_lists();
+			$list_id = isset( $_POST['list_id'] ) ? sanitize_key( wp_unslash( $_POST['list_id'] ) ) : '';
+
+			if ( empty( $list_id ) ) {
+				// New list — derive slug from user-supplied slug field.
+				$slug    = isset( $_POST['list_slug'] ) ? sanitize_title( wp_unslash( $_POST['list_slug'] ) ) : '';
+				$list_id = $slug;
+			}
+
+			if ( ! empty( $list_id ) ) {
+				$lists[ $list_id ] = $this->sanitize_feed_list( $_POST, $list_id );
+				update_option( WRA_Plugin::FEED_LISTS_OPTION, $lists );
+			}
+			$this->redirect_with_message( 'feed_list_saved' );
+		}
+
+		if ( 'delete_feed_list' === $action ) {
+			$lists   = WRA_Plugin::get_feed_lists();
+			$list_id = isset( $_POST['list_id'] ) ? sanitize_key( wp_unslash( $_POST['list_id'] ) ) : '';
+			unset( $lists[ $list_id ] );
+			update_option( WRA_Plugin::FEED_LISTS_OPTION, $lists );
+			$this->redirect_with_message( 'feed_list_deleted' );
+		}
 	}
 
 	/**
 	 * Render admin page.
 	 */
 	public function render_page() {
-		$settings = WRA_Plugin::get_settings();
-		$jobs     = WRA_Plugin::get_import_jobs();
-		$edit_job = $this->get_edit_job( $jobs );
-		$preview  = $this->get_preview_items( $settings );
+		$settings  = WRA_Plugin::get_settings();
+		$jobs      = WRA_Plugin::get_import_jobs();
+		$lists     = WRA_Plugin::get_feed_lists();
+		$edit_job  = $this->get_edit_job( $jobs );
+		$edit_list = $this->get_edit_list( $lists );
+		$preview   = $this->get_preview_items( $settings );
 		?>
 		<div class="wrap wra-admin">
 			<h1><?php esc_html_e( 'Curated RSS Aggregator', 'curated-rss-aggregator' ); ?></h1>
@@ -302,6 +329,7 @@ class WRA_Admin {
 					<table class="widefat striped" style="margin-top:8px;font-size:0.875rem;">
 						<thead><tr><th><?php esc_html_e( 'Attribute', 'curated-rss-aggregator' ); ?></th><th><?php esc_html_e( 'Options / default', 'curated-rss-aggregator' ); ?></th></tr></thead>
 						<tbody>
+							<tr><td><code>feed_list</code></td><td><?php esc_html_e( 'named list slug (overrides feeds)', 'curated-rss-aggregator' ); ?></td></tr>
 							<tr><td><code>layout</code></td><td>grid · list · compact <em>(grid)</em></td></tr>
 							<tr><td><code>columns</code></td><td>1–6, 0 = auto <em>(0)</em></td></tr>
 							<tr><td><code>card_style</code></td><td>default · shadow · flat · outline · none <em>(default)</em></td></tr>
@@ -339,6 +367,78 @@ class WRA_Admin {
 					<?php endif; ?>
 				</section>
 			</div>
+
+			<section class="wra-panel">
+				<h2><?php esc_html_e( 'Feed Lists', 'curated-rss-aggregator' ); ?></h2>
+				<p class="description"><?php esc_html_e( 'Named groups of feed URLs. Use a list in your shortcode with the feed_list attribute, e.g.:', 'curated-rss-aggregator' ); ?> <code>[curated_rss feed_list="tech-news"]</code></p>
+
+				<h3><?php echo $edit_list ? esc_html__( 'Edit Feed List', 'curated-rss-aggregator' ) : esc_html__( 'Create Feed List', 'curated-rss-aggregator' ); ?></h3>
+				<form method="post" class="wra-fields" style="max-width:600px;">
+					<?php wp_nonce_field( 'wra_admin_action' ); ?>
+					<input type="hidden" name="wra_action" value="save_feed_list">
+					<?php if ( $edit_list ) : ?>
+						<input type="hidden" name="list_id" value="<?php echo esc_attr( $edit_list['id'] ); ?>">
+					<?php endif; ?>
+
+					<?php if ( $edit_list ) : ?>
+						<p>
+							<label><?php esc_html_e( 'Slug (shortcode key)', 'curated-rss-aggregator' ); ?></label>
+							<code><?php echo esc_html( $edit_list['id'] ); ?></code>
+						</p>
+					<?php else : ?>
+						<p>
+							<label for="wra-list-slug"><?php esc_html_e( 'Slug', 'curated-rss-aggregator' ); ?></label>
+							<input id="wra-list-slug" type="text" name="list_slug" placeholder="tech-news" required pattern="[a-z0-9\-]+" title="<?php esc_attr_e( 'Lowercase letters, numbers, and hyphens only.', 'curated-rss-aggregator' ); ?>">
+							<span class="description"><?php esc_html_e( 'Lowercase letters, numbers, and hyphens. Used as the feed_list value in shortcodes.', 'curated-rss-aggregator' ); ?></span>
+						</p>
+					<?php endif; ?>
+
+					<p>
+						<label for="wra-list-name"><?php esc_html_e( 'Display name', 'curated-rss-aggregator' ); ?></label>
+						<input id="wra-list-name" type="text" name="list_name" value="<?php echo esc_attr( $edit_list ? $edit_list['name'] : '' ); ?>" required>
+					</p>
+
+					<p style="grid-column:1/-1;">
+						<label for="wra-list-feeds"><?php esc_html_e( 'Feed URLs', 'curated-rss-aggregator' ); ?></label>
+						<textarea id="wra-list-feeds" name="list_feeds" rows="6" style="width:100%;" placeholder="https://example.com/feed"><?php echo esc_textarea( $edit_list ? $edit_list['feeds'] : '' ); ?></textarea>
+						<span class="description"><?php esc_html_e( 'One URL per line.', 'curated-rss-aggregator' ); ?></span>
+					</p>
+
+					<?php submit_button( $edit_list ? __( 'Update List', 'curated-rss-aggregator' ) : __( 'Create List', 'curated-rss-aggregator' ) ); ?>
+				</form>
+
+				<?php if ( ! empty( $lists ) ) : ?>
+				<table class="widefat striped" style="margin-top:16px;">
+					<thead>
+						<tr>
+							<th><?php esc_html_e( 'Name', 'curated-rss-aggregator' ); ?></th>
+							<th><?php esc_html_e( 'Slug (shortcode key)', 'curated-rss-aggregator' ); ?></th>
+							<th><?php esc_html_e( 'Feeds', 'curated-rss-aggregator' ); ?></th>
+							<th><?php esc_html_e( 'Actions', 'curated-rss-aggregator' ); ?></th>
+						</tr>
+					</thead>
+					<tbody>
+						<?php foreach ( $lists as $list ) : ?>
+							<?php $feed_count = count( array_filter( array_map( 'trim', preg_split( '/[\r\n,]+/', (string) $list['feeds'] ) ) ) ); ?>
+							<tr>
+								<td><?php echo esc_html( $list['name'] ); ?></td>
+								<td><code><?php echo esc_html( $list['id'] ); ?></code></td>
+								<td><?php echo esc_html( $feed_count ); ?></td>
+								<td class="wra-actions">
+									<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=wra&edit_list=' . rawurlencode( $list['id'] ) ) ); ?>"><?php esc_html_e( 'Edit', 'curated-rss-aggregator' ); ?></a>
+									<form method="post" data-wra-confirm="<?php esc_attr_e( 'Delete this feed list?', 'curated-rss-aggregator' ); ?>">
+										<?php wp_nonce_field( 'wra_admin_action' ); ?>
+										<input type="hidden" name="wra_action" value="delete_feed_list">
+										<input type="hidden" name="list_id" value="<?php echo esc_attr( $list['id'] ); ?>">
+										<button class="button button-link-delete" type="submit"><?php esc_html_e( 'Delete', 'curated-rss-aggregator' ); ?></button>
+									</form>
+								</td>
+							</tr>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
+				<?php endif; ?>
+			</section>
 
 			<section class="wra-panel">
 				<h2><?php echo $edit_job ? esc_html__( 'Edit Import Job', 'curated-rss-aggregator' ) : esc_html__( 'Create Import Job', 'curated-rss-aggregator' ); ?></h2>
@@ -567,6 +667,21 @@ class WRA_Admin {
 	}
 
 	/**
+	 * Sanitize feed list form data.
+	 *
+	 * @param array  $data    Raw POST data.
+	 * @param string $list_id List slug/ID.
+	 * @return array
+	 */
+	private function sanitize_feed_list( $data, $list_id ) {
+		return array(
+			'id'    => $list_id,
+			'name'  => isset( $data['list_name'] ) ? sanitize_text_field( wp_unslash( $data['list_name'] ) ) : $list_id,
+			'feeds' => isset( $data['list_feeds'] ) ? $this->sanitize_multiline_urls( wp_unslash( $data['list_feeds'] ) ) : '',
+		);
+	}
+
+	/**
 	 * Sanitize line-separated URLs.
 	 *
 	 * @param string $value Raw value.
@@ -588,6 +703,17 @@ class WRA_Admin {
 	private function get_edit_job( $jobs ) {
 		$job_id = isset( $_GET['edit_job'] ) ? sanitize_key( wp_unslash( $_GET['edit_job'] ) ) : '';
 		return isset( $jobs[ $job_id ] ) ? $jobs[ $job_id ] : null;
+	}
+
+	/**
+	 * Get feed list being edited.
+	 *
+	 * @param array $lists Feed lists.
+	 * @return array|null
+	 */
+	private function get_edit_list( $lists ) {
+		$list_id = isset( $_GET['edit_list'] ) ? sanitize_key( wp_unslash( $_GET['edit_list'] ) ) : '';
+		return isset( $lists[ $list_id ] ) ? $lists[ $list_id ] : null;
 	}
 
 	/**
@@ -644,6 +770,10 @@ class WRA_Admin {
 				_n( 'OPML imported. %d feed URL added.', 'OPML imported. %d feed URLs added.', $added, 'curated-rss-aggregator' ),
 				$added
 			);
+		} elseif ( 'feed_list_saved' === $message ) {
+			$text = __( 'Feed list saved.', 'curated-rss-aggregator' );
+		} elseif ( 'feed_list_deleted' === $message ) {
+			$text = __( 'Feed list deleted.', 'curated-rss-aggregator' );
 		} elseif ( 'settings_imported' === $message ) {
 			$text = __( 'Settings imported successfully.', 'curated-rss-aggregator' );
 		} elseif ( 'settings_import_failed' === $message ) {

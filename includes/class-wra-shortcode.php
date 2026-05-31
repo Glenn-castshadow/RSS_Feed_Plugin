@@ -56,6 +56,7 @@ class WRA_Shortcode {
 		$settings = WRA_Plugin::get_settings();
 		$atts     = shortcode_atts(
 			array(
+				'feed_list'        => '',
 				'feeds'            => $settings['feeds'],
 				'items'            => 6,
 				'per_feed'         => 0,
@@ -81,6 +82,14 @@ class WRA_Shortcode {
 			$atts,
 			'curated_rss'
 		);
+
+		if ( ! empty( $atts['feed_list'] ) ) {
+			$lists   = WRA_Plugin::get_feed_lists();
+			$list_id = sanitize_key( $atts['feed_list'] );
+			if ( isset( $lists[ $list_id ] ) ) {
+				$atts['feeds'] = $lists[ $list_id ]['feeds'];
+			}
+		}
 
 		$urls           = $this->parse_feeds( $atts['feeds'] );
 		$limit          = max( 1, absint( $atts['items'] ) );
@@ -200,7 +209,16 @@ class WRA_Shortcode {
 		$offset   = max( 0, absint( isset( $_POST['offset'] ) ? $_POST['offset'] : 0 ) );
 		$limit    = max( 1, absint( isset( $params['items'] ) ? $params['items'] : 6 ) );
 		$settings = WRA_Plugin::get_settings();
-		$urls     = $this->parse_feeds( isset( $params['feeds'] ) ? $params['feeds'] : '' );
+
+		$feed_source = isset( $params['feeds'] ) ? $params['feeds'] : '';
+		if ( ! empty( $params['feed_list'] ) ) {
+			$lists   = WRA_Plugin::get_feed_lists();
+			$list_id = sanitize_key( $params['feed_list'] );
+			if ( isset( $lists[ $list_id ] ) ) {
+				$feed_source = $lists[ $list_id ]['feeds'];
+			}
+		}
+		$urls = $this->parse_feeds( $feed_source );
 
 		$items = $this->fetcher->get_items(
 			$urls,
@@ -330,6 +348,7 @@ class WRA_Shortcode {
 	 */
 	private function get_load_more_params( $atts ) {
 		return array(
+			'feed_list'        => $atts['feed_list'],
 			'feeds'            => $atts['feeds'],
 			'items'            => absint( $atts['items'] ),
 			'per_feed'         => absint( $atts['per_feed'] ),

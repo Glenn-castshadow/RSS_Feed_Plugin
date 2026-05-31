@@ -10,9 +10,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 class WRA_Plugin {
-	const SETTINGS_OPTION = 'wra_settings';
-	const IMPORTS_OPTION  = 'wra_import_jobs';
-	const CRON_HOOK       = 'wra_run_import_jobs';
+	const SETTINGS_OPTION   = 'wra_settings';
+	const IMPORTS_OPTION    = 'wra_import_jobs';
+	const FEED_LISTS_OPTION = 'wra_feed_lists';
+	const CRON_HOOK         = 'wra_run_import_jobs';
 
 	/**
 	 * Shared feed fetcher instance (used by block render callback).
@@ -131,6 +132,10 @@ class WRA_Plugin {
 			add_option( self::IMPORTS_OPTION, array() );
 		}
 
+		if ( false === get_option( self::FEED_LISTS_OPTION ) ) {
+			add_option( self::FEED_LISTS_OPTION, array() );
+		}
+
 		if ( ! wp_next_scheduled( self::CRON_HOOK ) ) {
 			wp_schedule_event( time() + MINUTE_IN_SECONDS, 'wra_every_15_minutes', self::CRON_HOOK );
 		}
@@ -236,5 +241,15 @@ class WRA_Plugin {
 	public static function get_import_jobs() {
 		$jobs = get_option( self::IMPORTS_OPTION, array() );
 		return is_array( $jobs ) ? $jobs : array();
+	}
+
+	/**
+	 * Named feed lists.
+	 *
+	 * @return array Associative array keyed by list slug.
+	 */
+	public static function get_feed_lists() {
+		$lists = get_option( self::FEED_LISTS_OPTION, array() );
+		return is_array( $lists ) ? $lists : array();
 	}
 }
