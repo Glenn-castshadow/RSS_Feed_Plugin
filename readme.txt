@@ -3,7 +3,7 @@ Contributors: castshadow
 Tags: rss, feed, aggregator, news, import
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 1.1.1
+Stable tag: 1.2.0
 Requires PHP: 7.4
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -78,6 +78,9 @@ Use the Export / Import Settings panel (collapsed under the Display Feeds sectio
 
 == Changelog ==
 
+= 1.2.0 =
+* Added named feed lists — create reusable groups of feed URLs in the admin and reference them in any shortcode with `feed_list="your-slug"`.
+
 = 1.1.1 =
 * Fixed: when some feed URLs return no items, the per_feed cap no longer leaves the grid short — a backfill pass draws extra items from working feeds to hit the requested total.
 
@@ -118,6 +121,9 @@ Use the Export / Import Settings panel (collapsed under the Display Feeds sectio
 * Added full-text extraction from source article URLs.
 
 == Upgrade Notice ==
+
+= 1.2.0 =
+Adds named feed lists. No database changes required beyond a new option being initialized on first use.
 
 = 1.1.1 =
 Fixes grid underfill when some feed URLs return no items. No database changes required.
