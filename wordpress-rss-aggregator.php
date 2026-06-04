@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Curated RSS Aggregator
  * Description: Display RSS feeds anywhere and optionally import filtered feed items as WordPress posts.
- * Version: 1.2.1
+ * Version: 1.2.2
  * Author: Local Build
  * License: GPL-2.0-or-later
  * Text Domain: curated-rss-aggregator
@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'WRA_VERSION', '1.2.1' );
+define( 'WRA_VERSION', '1.2.2' );
 define( 'WRA_PLUGIN_FILE', __FILE__ );
 define( 'WRA_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'WRA_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -38,4 +38,3 @@ add_action(
 		( new WRA_GitHub_Updater( WRA_PLUGIN_FILE ) )->init();
 	}
 );
-

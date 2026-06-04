@@ -3,7 +3,7 @@ Contributors: castshadow
 Tags: rss, feed, aggregator, news, import
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 1.2.1
+Stable tag: 1.2.2
 Requires PHP: 7.4
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -28,6 +28,7 @@ Curated RSS Aggregator lets you pull multiple RSS/Atom feeds into a clean, respo
 **Import features**
 
 * Schedule feed items as WordPress posts (draft, publish, pending, or private)
+* Full post import with images, using source article extraction with rich feed-content fallback
 * Optional full-text extraction from the source article URL
 * AI rewrite or summarize via OpenAI or OpenRouter
 * Per-job categories, tags, and post type
@@ -78,6 +79,11 @@ Use the Export / Import Settings panel (collapsed under the Display Feeds sectio
 
 == Changelog ==
 
+= 1.2.2 =
+* Added full-post import with images for import jobs, using source article extraction with rich feed-content fallback.
+* Improved full-text extraction to preserve usable inline images and resolve relative/lazy-loaded image URLs.
+* Fixed GitHub release packaging so `readme.txt` is included in release ZIPs.
+
 = 1.2.1 =
 * Added "Check for updates" button to the admin page that clears the GitHub release cache and forces WordPress to re-check for plugin updates immediately.
 
@@ -124,6 +130,9 @@ Use the Export / Import Settings panel (collapsed under the Display Feeds sectio
 * Added full-text extraction from source article URLs.
 
 == Upgrade Notice ==
+
+= 1.2.2 =
+Adds full-post import with images and improves release ZIP packaging.
 
 = 1.2.1 =
 Adds a "Check for updates" button to the admin. No database changes required.

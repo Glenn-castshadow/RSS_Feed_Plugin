@@ -536,12 +536,14 @@ class WRA_Admin {
 					</div>
 
 					<div class="wra-checks">
-						<label><input type="checkbox" name="enabled" value="1" <?php checked( $edit_job ? $edit_job['enabled'] : true ); ?>> <?php esc_html_e( 'Run on schedule', 'curated-rss-aggregator' ); ?></label>
-						<label><input type="checkbox" name="use_full_content" value="1" <?php checked( $edit_job ? $edit_job['use_full_content'] : false ); ?>> <?php esc_html_e( 'Use full feed content when available', 'curated-rss-aggregator' ); ?></label>
+						<label><input type="checkbox" name="enabled" value="1" <?php checked( $edit_job ? ! empty( $edit_job['enabled'] ) : true ); ?>> <?php esc_html_e( 'Run on schedule', 'curated-rss-aggregator' ); ?></label>
+						<label><input type="checkbox" name="import_full_post" value="1" <?php checked( $edit_job ? ! empty( $edit_job['import_full_post'] ) : false ); ?>> <?php esc_html_e( 'Import full post with images', 'curated-rss-aggregator' ); ?></label>
+						<label><input type="checkbox" name="use_full_content" value="1" <?php checked( $edit_job ? ! empty( $edit_job['use_full_content'] ) : false ); ?>> <?php esc_html_e( 'Use full feed content when available', 'curated-rss-aggregator' ); ?></label>
 						<label><input type="checkbox" name="full_text_extraction" value="1" <?php checked( $edit_job ? ! empty( $edit_job['full_text_extraction'] ) : false ); ?>> <?php esc_html_e( 'Fetch full text from source URL (overrides feed content, slower)', 'curated-rss-aggregator' ); ?></label>
-						<label><input type="checkbox" name="save_featured_image" value="1" <?php checked( $edit_job ? $edit_job['save_featured_image'] : false ); ?>> <?php esc_html_e( 'Save extracted image as featured image', 'curated-rss-aggregator' ); ?></label>
-						<label><input type="checkbox" name="preserve_date" value="1" <?php checked( $edit_job ? $edit_job['preserve_date'] : false ); ?>> <?php esc_html_e( 'Preserve source publish date', 'curated-rss-aggregator' ); ?></label>
+						<label><input type="checkbox" name="save_featured_image" value="1" <?php checked( $edit_job ? ! empty( $edit_job['save_featured_image'] ) : false ); ?>> <?php esc_html_e( 'Save extracted image as featured image', 'curated-rss-aggregator' ); ?></label>
+						<label><input type="checkbox" name="preserve_date" value="1" <?php checked( $edit_job ? ! empty( $edit_job['preserve_date'] ) : false ); ?>> <?php esc_html_e( 'Preserve source publish date', 'curated-rss-aggregator' ); ?></label>
 					</div>
+					<p class="description"><?php esc_html_e( 'Full-post import fetches the source article body, keeps usable inline images, and falls back to full feed content when extraction is unavailable.', 'curated-rss-aggregator' ); ?></p>
 
 					<div class="wra-fields">
 						<p>
@@ -670,6 +672,7 @@ class WRA_Admin {
 			'date_after'           => isset( $data['date_after'] ) ? sanitize_text_field( wp_unslash( $data['date_after'] ) ) : '',
 			'date_before'          => isset( $data['date_before'] ) ? sanitize_text_field( wp_unslash( $data['date_before'] ) ) : '',
 			'enabled'              => ! empty( $data['enabled'] ),
+			'import_full_post'     => ! empty( $data['import_full_post'] ),
 			'use_full_content'     => ! empty( $data['use_full_content'] ),
 			'full_text_extraction' => ! empty( $data['full_text_extraction'] ),
 			'save_featured_image'  => ! empty( $data['save_featured_image'] ),

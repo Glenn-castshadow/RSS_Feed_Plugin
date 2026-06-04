@@ -191,18 +191,30 @@ class WRA_Importer {
 	private function insert_item( $item, $job, $amazon_tag = '' ) {
 		$warnings = array();
 
-		// Start with feed content.
-		$content = ! empty( $job['use_full_content'] ) ? $item['content'] : wpautop( esc_html( $item['excerpt'] ) );
+		$import_full_post = ! empty( $job['import_full_post'] );
+
+		// Start with feed content unless this job intentionally imports excerpts.
+		$content = ( $import_full_post || ! empty( $job['use_full_content'] ) ) ? $item['content'] : wpautop( esc_html( $item['excerpt'] ) );
 
 		// Full-text extraction fetches the source article body.
-		if ( ! empty( $job['full_text_extraction'] ) && null !== $this->extractor ) {
+		if ( ( $import_full_post || ! empty( $job['full_text_extraction'] ) ) && null !== $this->extractor ) {
 			$extract_error = null;
 			$extracted     = $this->extractor->extract( $item['link'], 15, $extract_error );
 			if ( ! empty( $extracted ) ) {
 				$content = $extracted;
+				if ( method_exists( $this->extractor, 'get_last_image' ) && $this->extractor->get_last_image() ) {
+					$item['image'] = $this->extractor->get_last_image();
+				}
 			} elseif ( null !== $extract_error ) {
 				$warnings[] = sprintf( 'Full-text extraction failed for "%s": %s', $item['link'], $extract_error );
 			}
+		}
+
+		if ( $import_full_post && ! empty( $item['image'] ) && false === stripos( $content, '<img' ) ) {
+			$content = sprintf(
+				'<figure class="wra-imported-image"><img src="%s" alt="" loading="lazy"></figure>',
+				esc_url( $item['image'] )
+			) . $content;
 		}
 
 		// AI rewrite/summarize.

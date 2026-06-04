@@ -13,6 +13,7 @@
 define( 'ABSPATH', dirname( __DIR__ ) . DIRECTORY_SEPARATOR );
 define( 'HOUR_IN_SECONDS', 3600 );
 define( 'MINUTE_IN_SECONDS', 60 );
+define( 'WRA_VERSION', 'test' );
 
 // --- WordPress function stubs -------------------------------------------
 
@@ -38,6 +39,24 @@ if ( ! function_exists( 'esc_url_raw' ) ) {
 	}
 }
 
+if ( ! function_exists( 'esc_url' ) ) {
+	function esc_url( $url ) {
+		return esc_url_raw( $url );
+	}
+}
+
+if ( ! function_exists( 'wp_parse_url' ) ) {
+	function wp_parse_url( $url, $component = -1 ) {
+		return parse_url( $url, $component );
+	}
+}
+
+if ( ! function_exists( 'wp_kses_post' ) ) {
+	function wp_kses_post( $html ) {
+		return $html;
+	}
+}
+
 if ( ! function_exists( 'absint' ) ) {
 	function absint( $maybeint ) {
 		return abs( (int) $maybeint );
@@ -46,3 +65,4 @@ if ( ! function_exists( 'absint' ) ) {
 
 // Load the class under test.
 require_once dirname( __DIR__ ) . '/includes/class-wra-feed-fetcher.php';
+require_once dirname( __DIR__ ) . '/includes/class-wra-full-text-extractor.php';
