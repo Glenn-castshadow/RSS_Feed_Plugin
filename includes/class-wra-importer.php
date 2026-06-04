@@ -74,15 +74,22 @@ class WRA_Importer {
 		$settings    = WRA_Plugin::get_settings();
 		$urls        = array_filter( array_map( 'trim', preg_split( '/[\r\n,]+/', (string) $job['feeds'] ) ) );
 		$feed_errors = array();
+		$fallbacks   = WRA_Plugin::get_fallback_images();
+
+		if ( ! empty( $job['fallback_image_url'] ) ) {
+			array_unshift( $fallbacks, esc_url_raw( $job['fallback_image_url'] ) );
+		}
 
 		$items = $this->fetcher->get_items(
 			$urls,
 			array(
 				'limit'            => absint( $job['limit'] ),
 				'cache_minutes'    => absint( $settings['cache_minutes'] ),
-				'fallback_images'  => WRA_Plugin::get_fallback_images(),
+				'fallback_images'  => $fallbacks,
 				'include_keywords' => isset( $job['include_keywords'] ) ? $job['include_keywords'] : '',
 				'exclude_keywords' => isset( $job['exclude_keywords'] ) ? $job['exclude_keywords'] : '',
+				'advanced_filters'  => isset( $job['advanced_filters'] ) ? $job['advanced_filters'] : array(),
+				'advanced_mode'     => isset( $job['advanced_filter_mode'] ) ? $job['advanced_filter_mode'] : 'all',
 				'date_after'       => isset( $job['date_after'] ) ? $job['date_after'] : '',
 				'date_before'      => isset( $job['date_before'] ) ? $job['date_before'] : '',
 				'affiliate_name'   => $settings['affiliate_name'],
@@ -259,9 +266,23 @@ class WRA_Importer {
 		update_post_meta( $post_id, '_wra_source_guid', $item['guid'] );
 		update_post_meta( $post_id, '_wra_source_link', $item['link'] );
 		update_post_meta( $post_id, '_wra_source_feed', $item['source_feed'] );
+		if ( ! empty( $job['enable_canonical'] ) ) {
+			update_post_meta( $post_id, '_wra_canonical_source', esc_url_raw( $item['link'] ) );
+		}
 
+		$category_ids = array();
 		if ( ! empty( $job['category'] ) ) {
-			wp_set_post_terms( $post_id, array( absint( $job['category'] ) ), 'category', true );
+			$category_ids[] = absint( $job['category'] );
+		}
+
+		$mapped_category = $this->match_category_mapping( $item, isset( $job['category_mappings'] ) ? $job['category_mappings'] : array() );
+		if ( $mapped_category ) {
+			$category_ids[] = $mapped_category;
+		}
+
+		$category_ids = array_values( array_unique( array_filter( array_map( 'absint', $category_ids ) ) ) );
+		if ( ! empty( $category_ids ) ) {
+			wp_set_post_terms( $post_id, $category_ids, 'category', true );
 		}
 
 		if ( ! empty( $job['tags'] ) ) {
@@ -276,6 +297,59 @@ class WRA_Importer {
 		}
 
 		return array( 'post_id' => (int) $post_id, 'warnings' => $warnings );
+	}
+
+	/**
+	 * Match keyword-to-category mappings against a feed item.
+	 *
+	 * @param array $item     Feed item.
+	 * @param array $mappings Mapping configs.
+	 * @return int Category ID, or 0 when no mapping matches.
+	 */
+	private function match_category_mapping( $item, $mappings ) {
+		if ( empty( $mappings ) || ! is_array( $mappings ) ) {
+			return 0;
+		}
+
+		$haystack = strtolower(
+			wp_strip_all_tags(
+				$item['title'] . ' ' . $item['excerpt'] . ' ' . $item['content'] . ' ' . $item['author']
+			)
+		);
+
+		foreach ( $mappings as $mapping ) {
+			if ( empty( $mapping['keywords'] ) || empty( $mapping['category'] ) ) {
+				continue;
+			}
+
+			$keywords = array_filter( array_map( 'trim', explode( ',', $mapping['keywords'] ) ) );
+			foreach ( $keywords as $keyword ) {
+				if ( '' !== $keyword && false !== strpos( $haystack, strtolower( $keyword ) ) ) {
+					return $this->resolve_category_id( $mapping['category'] );
+				}
+			}
+		}
+
+		return 0;
+	}
+
+	/**
+	 * Resolve category ID from an ID, slug, or name.
+	 *
+	 * @param string|int $category Category identifier.
+	 * @return int
+	 */
+	private function resolve_category_id( $category ) {
+		if ( is_numeric( $category ) ) {
+			return absint( $category );
+		}
+
+		$term = get_category_by_slug( sanitize_title( $category ) );
+		if ( ! $term ) {
+			$term = get_term_by( 'name', sanitize_text_field( $category ), 'category' );
+		}
+
+		return $term && ! is_wp_error( $term ) ? absint( $term->term_id ) : 0;
 	}
 
 	/**

@@ -2,7 +2,7 @@
 
 A WordPress plugin for displaying and importing RSS feeds. Show feeds anywhere with a shortcode or Gutenberg block, filter by keyword, limit items per source, and optionally import feed items as WordPress posts — with optional full-text extraction and AI rewrite/summarize.
 
-**Current version:** 1.2.2
+**Current version:** 1.2.3
 
 ---
 
@@ -24,6 +24,9 @@ A WordPress plugin for displaying and importing RSS feeds. Show feeds anywhere w
 - Import feed items as any post type; configurable per-job schedule (15 min to 24 hours)
 - Per-job: post status, post type, item limit, keyword filters, date range
 - Full post import with images — fetches source article text, keeps inline images, and falls back to rich feed content
+- Advanced import filters by title, description, content, author, image, source, or date
+- Keyword-to-category mapping and per-job fallback images
+- Optional canonical URLs pointing imported posts back to the source article
 - Full-text extraction — fetches the source article body instead of the feed snippet
 - AI rewrite or summarize via OpenAI or OpenRouter
 - Optional featured image sideloading
@@ -41,7 +44,7 @@ A WordPress plugin for displaying and importing RSS feeds. Show feeds anywhere w
 
 ### From the zip (recommended)
 
-1. Download `curated-rss-aggregator-1.2.2.zip` from the `dist/` folder or a GitHub release.
+1. Download `curated-rss-aggregator-1.2.3.zip` from the `dist/` folder or a GitHub release.
 2. In WordPress go to **Plugins → Add New → Upload Plugin**.
 3. Upload the zip and click **Install Now**, then **Activate**.
 4. Open **RSS Aggregator** in the WordPress admin sidebar.
@@ -58,10 +61,10 @@ A WordPress plugin for displaying and importing RSS feeds. Show feeds anywhere w
 From the repository root on Windows (PowerShell):
 
 ```powershell
-.\scripts\build-plugin.ps1 -Version "1.2.2"
+.\scripts\build-plugin.ps1 -Version "1.2.3"
 ```
 
-The zip is written to `dist/curated-rss-aggregator-1.2.2.zip`.
+The zip is written to `dist/curated-rss-aggregator-1.2.3.zip`.
 Omit `-Version` to produce `dist/curated-rss-aggregator.zip`.
 
 > **Note:** The build script uses .NET's `ZipArchive` directly to ensure zip entry paths use forward slashes. PowerShell's `Compress-Archive` writes Windows backslashes, which breaks PHP's `ZipArchive` extraction on Linux servers.
@@ -158,8 +161,11 @@ Go to **RSS Aggregator → Create Import Job**.
 | Post status | `draft` · `publish` · `pending` · `private` |
 | Post type | Any registered post type slug |
 | Include / Exclude keywords | Same logic as the shortcode |
+| Advanced import filters | One rule per line: `field | operator | value`; supports all/any match mode |
 | Category | Assign imported posts to a WordPress category |
+| Category mappings | Add categories by keywords, one line like `bourbon, whiskey => Reviews` |
 | Tags | Comma-separated tag names applied to every imported post |
+| Job fallback image URL | Image URL used before the global fallback image pool |
 | Date after / before | Only import items within this date range |
 | Run on schedule | Enable or pause the cron job |
 | Run every | 15 min · 30 min · 1 h · 2 h · 6 h · 12 h · 24 h |
@@ -170,6 +176,10 @@ Go to **RSS Aggregator → Create Import Job**.
 | Custom AI instructions | Appended to the AI system prompt |
 | Save image as featured | Sideloads the first found image |
 | Preserve source date | Uses the feed item's publish date instead of now |
+| Use source URL as canonical | Stores the source article URL as the canonical URL for imported posts |
+
+Advanced filter fields: `title`, `description`, `content`, `author`, `image`, `source_feed`, `date`.
+Operators: `contains`, `not_contains`, `equals`, `not_equals`, `empty`, `not_empty`, `regex`, `date_after`, `date_before`.
 
 ---
 

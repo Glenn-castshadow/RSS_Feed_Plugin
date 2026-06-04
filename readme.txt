@@ -3,7 +3,7 @@ Contributors: castshadow
 Tags: rss, feed, aggregator, news, import
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 1.2.2
+Stable tag: 1.2.3
 Requires PHP: 7.4
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -29,6 +29,7 @@ Curated RSS Aggregator lets you pull multiple RSS/Atom feeds into a clean, respo
 
 * Schedule feed items as WordPress posts (draft, publish, pending, or private)
 * Full post import with images, using source article extraction with rich feed-content fallback
+* Advanced import filters, category mapping, per-job fallback images, and optional source canonical URLs
 * Optional full-text extraction from the source article URL
 * AI rewrite or summarize via OpenAI or OpenRouter
 * Per-job categories, tags, and post type
@@ -78,6 +79,12 @@ Use the Export / Import Settings panel (collapsed under the Display Feeds sectio
 4. Frontend grid layout with shadow card style.
 
 == Changelog ==
+
+= 1.2.3 =
+* Added advanced import filters with all/any matching across title, description, content, author, image, source feed, and date fields.
+* Added keyword-to-category mappings for import jobs.
+* Added per-job fallback image URLs.
+* Added optional source URL canonical tags for imported posts.
 
 = 1.2.2 =
 * Added full-post import with images for import jobs, using source article extraction with rich feed-content fallback.
@@ -130,6 +137,9 @@ Use the Export / Import Settings panel (collapsed under the Display Feeds sectio
 * Added full-text extraction from source article URLs.
 
 == Upgrade Notice ==
+
+= 1.2.3 =
+Adds advanced import filters, category mappings, per-job fallback images, and optional source canonical URLs.
 
 = 1.2.2 =
 Adds full-post import with images and improves release ZIP packaging.

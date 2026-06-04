@@ -516,6 +516,19 @@ class WRA_Admin {
 							<input id="wra-before" type="date" name="date_before" value="<?php echo esc_attr( $edit_job ? $edit_job['date_before'] : '' ); ?>">
 						</p>
 						<p>
+							<label for="wra-advanced-mode"><?php esc_html_e( 'Advanced filter mode', 'curated-rss-aggregator' ); ?></label>
+							<?php $advanced_mode = $edit_job && isset( $edit_job['advanced_filter_mode'] ) ? $edit_job['advanced_filter_mode'] : 'all'; ?>
+							<select id="wra-advanced-mode" name="advanced_filter_mode">
+								<option value="all" <?php selected( $advanced_mode, 'all' ); ?>><?php esc_html_e( 'All rules must match', 'curated-rss-aggregator' ); ?></option>
+								<option value="any" <?php selected( $advanced_mode, 'any' ); ?>><?php esc_html_e( 'Any rule may match', 'curated-rss-aggregator' ); ?></option>
+							</select>
+						</p>
+						<p style="grid-column:1/-1;">
+							<label for="wra-advanced-filters"><?php esc_html_e( 'Advanced import filters', 'curated-rss-aggregator' ); ?></label>
+							<textarea id="wra-advanced-filters" name="advanced_filters" rows="4" placeholder="title | contains | bourbon&#10;author | not_equals | Sponsored&#10;image | not_empty"><?php echo esc_textarea( $edit_job ? $this->format_advanced_filters( isset( $edit_job['advanced_filters'] ) ? $edit_job['advanced_filters'] : array() ) : '' ); ?></textarea>
+							<span class="description"><?php esc_html_e( 'One rule per line: field | operator | value. Fields: title, description, content, author, image, source_feed, date. Operators: contains, not_contains, equals, not_equals, empty, not_empty, regex, date_after, date_before.', 'curated-rss-aggregator' ); ?></span>
+						</p>
+						<p>
 							<label for="wra-job-category"><?php esc_html_e( 'Category', 'curated-rss-aggregator' ); ?></label>
 							<select id="wra-job-category" name="category">
 								<option value="0"><?php esc_html_e( '— None —', 'curated-rss-aggregator' ); ?></option>
@@ -533,6 +546,16 @@ class WRA_Admin {
 							<input id="wra-job-tags" type="text" name="tags" value="<?php echo esc_attr( $edit_job ? ( isset( $edit_job['tags'] ) ? $edit_job['tags'] : '' ) : '' ); ?>" placeholder="bourbon, whiskey, review">
 							<span class="description"><?php esc_html_e( 'Comma-separated tag names.', 'curated-rss-aggregator' ); ?></span>
 						</p>
+						<p style="grid-column:1/-1;">
+							<label for="wra-category-mappings"><?php esc_html_e( 'Category mappings', 'curated-rss-aggregator' ); ?></label>
+							<textarea id="wra-category-mappings" name="category_mappings" rows="3" placeholder="bourbon, whiskey => Reviews&#10;deals, coupon => Deals"><?php echo esc_textarea( $edit_job ? $this->format_category_mappings( isset( $edit_job['category_mappings'] ) ? $edit_job['category_mappings'] : array() ) : '' ); ?></textarea>
+							<span class="description"><?php esc_html_e( 'One mapping per line: keywords => category ID, slug, or name. Mapped categories are added alongside the default category.', 'curated-rss-aggregator' ); ?></span>
+						</p>
+						<p style="grid-column:1/-1;">
+							<label for="wra-job-fallback-image"><?php esc_html_e( 'Job fallback image URL', 'curated-rss-aggregator' ); ?></label>
+							<input id="wra-job-fallback-image" type="url" name="fallback_image_url" value="<?php echo esc_attr( $edit_job ? ( isset( $edit_job['fallback_image_url'] ) ? $edit_job['fallback_image_url'] : '' ) : '' ); ?>" placeholder="https://example.com/fallback.jpg">
+							<span class="description"><?php esc_html_e( 'Used before the global fallback image pool when this import job finds an item with no image.', 'curated-rss-aggregator' ); ?></span>
+						</p>
 					</div>
 
 					<div class="wra-checks">
@@ -542,6 +565,7 @@ class WRA_Admin {
 						<label><input type="checkbox" name="full_text_extraction" value="1" <?php checked( $edit_job ? ! empty( $edit_job['full_text_extraction'] ) : false ); ?>> <?php esc_html_e( 'Fetch full text from source URL (overrides feed content, slower)', 'curated-rss-aggregator' ); ?></label>
 						<label><input type="checkbox" name="save_featured_image" value="1" <?php checked( $edit_job ? ! empty( $edit_job['save_featured_image'] ) : false ); ?>> <?php esc_html_e( 'Save extracted image as featured image', 'curated-rss-aggregator' ); ?></label>
 						<label><input type="checkbox" name="preserve_date" value="1" <?php checked( $edit_job ? ! empty( $edit_job['preserve_date'] ) : false ); ?>> <?php esc_html_e( 'Preserve source publish date', 'curated-rss-aggregator' ); ?></label>
+						<label><input type="checkbox" name="enable_canonical" value="1" <?php checked( $edit_job ? ! empty( $edit_job['enable_canonical'] ) : false ); ?>> <?php esc_html_e( 'Use source URL as canonical', 'curated-rss-aggregator' ); ?></label>
 					</div>
 					<p class="description"><?php esc_html_e( 'Full-post import fetches the source article body, keeps usable inline images, and falls back to full feed content when extraction is unavailable.', 'curated-rss-aggregator' ); ?></p>
 
@@ -669,6 +693,10 @@ class WRA_Admin {
 			'tags'                 => isset( $data['tags'] ) ? sanitize_text_field( wp_unslash( $data['tags'] ) ) : '',
 			'include_keywords'     => isset( $data['include_keywords'] ) ? sanitize_text_field( wp_unslash( $data['include_keywords'] ) ) : '',
 			'exclude_keywords'     => isset( $data['exclude_keywords'] ) ? sanitize_text_field( wp_unslash( $data['exclude_keywords'] ) ) : '',
+			'advanced_filter_mode' => isset( $data['advanced_filter_mode'] ) && 'any' === sanitize_key( wp_unslash( $data['advanced_filter_mode'] ) ) ? 'any' : 'all',
+			'advanced_filters'     => isset( $data['advanced_filters'] ) ? $this->sanitize_advanced_filters( wp_unslash( $data['advanced_filters'] ) ) : array(),
+			'category_mappings'    => isset( $data['category_mappings'] ) ? $this->sanitize_category_mappings( wp_unslash( $data['category_mappings'] ) ) : array(),
+			'fallback_image_url'   => isset( $data['fallback_image_url'] ) ? esc_url_raw( wp_unslash( $data['fallback_image_url'] ) ) : '',
 			'date_after'           => isset( $data['date_after'] ) ? sanitize_text_field( wp_unslash( $data['date_after'] ) ) : '',
 			'date_before'          => isset( $data['date_before'] ) ? sanitize_text_field( wp_unslash( $data['date_before'] ) ) : '',
 			'enabled'              => ! empty( $data['enabled'] ),
@@ -677,10 +705,131 @@ class WRA_Admin {
 			'full_text_extraction' => ! empty( $data['full_text_extraction'] ),
 			'save_featured_image'  => ! empty( $data['save_featured_image'] ),
 			'preserve_date'        => ! empty( $data['preserve_date'] ),
+			'enable_canonical'     => ! empty( $data['enable_canonical'] ),
 			'ai_mode'              => in_array( $ai_mode, $valid_ai_modes, true ) ? $ai_mode : 'none',
 			'ai_prompt'            => isset( $data['ai_prompt'] ) ? sanitize_textarea_field( wp_unslash( $data['ai_prompt'] ) ) : '',
 			'log'                  => $existing_log,
 		);
+	}
+
+	/**
+	 * Parse structured filter rules from textarea input.
+	 *
+	 * @param string|array $value Raw textarea value or imported array.
+	 * @return array
+	 */
+	private function sanitize_advanced_filters( $value ) {
+		if ( is_array( $value ) ) {
+			$rows = $value;
+		} else {
+			$rows = preg_split( '/[\r\n]+/', (string) $value );
+		}
+
+		$allowed_fields    = array( 'title', 'description', 'content', 'author', 'image', 'source_feed', 'date' );
+		$allowed_operators = array( 'contains', 'not_contains', 'equals', 'not_equals', 'empty', 'not_empty', 'regex', 'date_after', 'date_before' );
+		$filters           = array();
+
+		foreach ( $rows as $row ) {
+			if ( is_array( $row ) ) {
+				$field    = isset( $row['field'] ) ? sanitize_key( $row['field'] ) : '';
+				$operator = isset( $row['operator'] ) ? sanitize_key( $row['operator'] ) : '';
+				$raw      = isset( $row['value'] ) ? $row['value'] : '';
+			} else {
+				$parts = array_map( 'trim', explode( '|', (string) $row, 3 ) );
+				if ( count( $parts ) < 2 ) {
+					continue;
+				}
+				$field    = sanitize_key( $parts[0] );
+				$operator = sanitize_key( $parts[1] );
+				$raw      = isset( $parts[2] ) ? $parts[2] : '';
+			}
+
+			if ( ! in_array( $field, $allowed_fields, true ) || ! in_array( $operator, $allowed_operators, true ) ) {
+				continue;
+			}
+
+			$filters[] = array(
+				'field'    => $field,
+				'operator' => $operator,
+				'value'    => sanitize_text_field( $raw ),
+			);
+		}
+
+		return $filters;
+	}
+
+	/**
+	 * Parse keyword-to-category mappings from textarea input.
+	 *
+	 * @param string|array $value Raw textarea value or imported array.
+	 * @return array
+	 */
+	private function sanitize_category_mappings( $value ) {
+		if ( is_array( $value ) ) {
+			$rows = $value;
+		} else {
+			$rows = preg_split( '/[\r\n]+/', (string) $value );
+		}
+
+		$mappings = array();
+		foreach ( $rows as $row ) {
+			if ( is_array( $row ) ) {
+				$keywords = isset( $row['keywords'] ) ? $row['keywords'] : '';
+				$category = isset( $row['category'] ) ? $row['category'] : '';
+			} else {
+				$parts = array_map( 'trim', explode( '=>', (string) $row, 2 ) );
+				if ( count( $parts ) < 2 ) {
+					continue;
+				}
+				$keywords = $parts[0];
+				$category = $parts[1];
+			}
+
+			if ( '' === trim( (string) $keywords ) || '' === trim( (string) $category ) ) {
+				continue;
+			}
+
+			$mappings[] = array(
+				'keywords' => sanitize_text_field( $keywords ),
+				'category' => sanitize_text_field( $category ),
+			);
+		}
+
+		return $mappings;
+	}
+
+	/**
+	 * Format structured filters for textarea editing.
+	 *
+	 * @param array $filters Filters.
+	 * @return string
+	 */
+	private function format_advanced_filters( $filters ) {
+		$lines = array();
+		foreach ( (array) $filters as $filter ) {
+			if ( empty( $filter['field'] ) || empty( $filter['operator'] ) ) {
+				continue;
+			}
+			$lines[] = $filter['field'] . ' | ' . $filter['operator'] . ' | ' . ( isset( $filter['value'] ) ? $filter['value'] : '' );
+		}
+		return implode( "\n", $lines );
+	}
+
+	/**
+	 * Format category mappings for textarea editing.
+	 *
+	 * @param array $mappings Mappings.
+	 * @return string
+	 */
+	private function format_category_mappings( $mappings ) {
+		$lines = array();
+		foreach ( (array) $mappings as $mapping ) {
+			if ( empty( $mapping['keywords'] ) || empty( $mapping['category'] ) ) {
+				continue;
+			}
+			$lines[] = $mapping['keywords'] . ' => ' . $mapping['category'];
+		}
+		return implode( "\n", $lines );
 	}
 
 	/**

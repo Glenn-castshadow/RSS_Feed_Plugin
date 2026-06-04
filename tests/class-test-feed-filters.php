@@ -31,6 +31,8 @@ class Test_Feed_Filters extends TestCase {
 		$defaults = array(
 			'include_keywords' => '',
 			'exclude_keywords' => '',
+			'advanced_filters'  => array(),
+			'advanced_mode'     => 'all',
 			'date_after'       => '',
 			'date_before'      => '',
 		);
@@ -42,6 +44,9 @@ class Test_Feed_Filters extends TestCase {
 			'title'     => $title,
 			'content'   => $content,
 			'excerpt'   => '',
+			'author'    => '',
+			'image'     => '',
+			'date'      => '',
 			'timestamp' => $timestamp ?: time(),
 		);
 	}
@@ -141,5 +146,59 @@ class Test_Feed_Filters extends TestCase {
 	public function test_no_filters_always_passes(): void {
 		$item = $this->make_item( 'Anything', 'Any content.' );
 		$this->assertTrue( $this->call( $item, array() ) );
+	}
+
+	// ---- advanced filters ---------------------------------------------
+
+	public function test_advanced_filters_all_mode_requires_every_rule(): void {
+		$item           = $this->make_item( 'Bourbon Review', 'Independent tasting notes.' );
+		$item['author'] = 'Staff';
+
+		$this->assertTrue( $this->call( $item, array(
+			'advanced_filters' => array(
+				array( 'field' => 'title', 'operator' => 'contains', 'value' => 'bourbon' ),
+				array( 'field' => 'author', 'operator' => 'not_equals', 'value' => 'Sponsored' ),
+			),
+		) ) );
+
+		$this->assertFalse( $this->call( $item, array(
+			'advanced_filters' => array(
+				array( 'field' => 'title', 'operator' => 'contains', 'value' => 'bourbon' ),
+				array( 'field' => 'content', 'operator' => 'contains', 'value' => 'rum' ),
+			),
+		) ) );
+	}
+
+	public function test_advanced_filters_any_mode_accepts_one_match(): void {
+		$item = $this->make_item( 'Single Malt Notes', 'Peated scotch.' );
+
+		$this->assertTrue( $this->call( $item, array(
+			'advanced_mode'    => 'any',
+			'advanced_filters' => array(
+				array( 'field' => 'title', 'operator' => 'contains', 'value' => 'bourbon' ),
+				array( 'field' => 'content', 'operator' => 'contains', 'value' => 'scotch' ),
+			),
+		) ) );
+	}
+
+	public function test_advanced_filter_can_require_image(): void {
+		$item          = $this->make_item( 'Photo Essay' );
+		$item['image'] = 'https://example.com/image.jpg';
+
+		$this->assertTrue( $this->call( $item, array(
+			'advanced_filters' => array(
+				array( 'field' => 'image', 'operator' => 'not_empty', 'value' => '' ),
+			),
+		) ) );
+	}
+
+	public function test_advanced_filter_regex_matches_title(): void {
+		$item = $this->make_item( 'Batch 12 Review' );
+
+		$this->assertTrue( $this->call( $item, array(
+			'advanced_filters' => array(
+				array( 'field' => 'title', 'operator' => 'regex', 'value' => 'batch\s+\d+' ),
+			),
+		) ) );
 	}
 }

@@ -51,6 +51,7 @@ class WRA_Plugin {
 		add_filter( 'cron_schedules', array( __CLASS__, 'add_cron_schedules' ) );
 		add_action( 'wp_ajax_wra_load_more', array( self::$shortcode, 'ajax_load_more' ) );
 		add_action( 'wp_ajax_nopriv_wra_load_more', array( self::$shortcode, 'ajax_load_more' ) );
+		add_filter( 'get_canonical_url', array( __CLASS__, 'filter_canonical_url' ), 10, 2 );
 	}
 
 	/**
@@ -60,6 +61,22 @@ class WRA_Plugin {
 	 */
 	public static function get_shortcode() {
 		return self::$shortcode;
+	}
+
+	/**
+	 * Use source URLs as canonical URLs for imported posts when enabled.
+	 *
+	 * @param string  $canonical_url Canonical URL.
+	 * @param WP_Post $post          Post object.
+	 * @return string
+	 */
+	public static function filter_canonical_url( $canonical_url, $post ) {
+		if ( ! $post || empty( $post->ID ) ) {
+			return $canonical_url;
+		}
+
+		$source = get_post_meta( $post->ID, '_wra_canonical_source', true );
+		return $source ? esc_url_raw( $source ) : $canonical_url;
 	}
 
 	/**
