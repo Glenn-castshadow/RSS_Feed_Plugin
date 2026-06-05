@@ -41,7 +41,8 @@ class WRA_Plugin {
 		$ai_rewriter  = ! empty( $settings['ai_api_key'] ) ? new WRA_AI_Rewriter( $settings ) : null;
 		$importer     = new WRA_Importer( self::$fetcher, $extractor, $ai_rewriter );
 
-		self::$shortcode = new WRA_Shortcode( self::$fetcher );
+		$post_source     = new WRA_Post_Source();
+		self::$shortcode = new WRA_Shortcode( self::$fetcher, $post_source );
 		new WRA_Admin( self::$fetcher, $importer );
 
 		add_action( 'init', array( __CLASS__, 'register_block' ) );

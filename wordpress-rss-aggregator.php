@@ -22,6 +22,7 @@ require_once WRA_PLUGIN_DIR . 'includes/class-wra-feed-fetcher.php';
 require_once WRA_PLUGIN_DIR . 'includes/class-wra-full-text-extractor.php';
 require_once WRA_PLUGIN_DIR . 'includes/class-wra-ai-rewriter.php';
 require_once WRA_PLUGIN_DIR . 'includes/class-wra-importer.php';
+require_once WRA_PLUGIN_DIR . 'includes/class-wra-post-source.php';
 require_once WRA_PLUGIN_DIR . 'includes/class-wra-shortcode.php';
 require_once WRA_PLUGIN_DIR . 'includes/class-wra-admin.php';
 require_once WRA_PLUGIN_DIR . 'includes/class-wra-plugin.php';
