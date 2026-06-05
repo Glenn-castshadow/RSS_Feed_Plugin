@@ -32,6 +32,13 @@ class WRA_Shortcode {
 	private $repo;
 
 	/**
+	 * Stale-while-revalidate item cache.
+	 *
+	 * @var WRA_Feed_Cache
+	 */
+	private $cache;
+
+	/**
 	 * Constructor.
 	 *
 	 * @param WRA_Feed_Fetcher        $fetcher     Feed fetcher.
@@ -42,16 +49,20 @@ class WRA_Shortcode {
 		$this->fetcher     = $fetcher;
 		$this->post_source = $post_source;
 		$this->repo        = $repo;
+		$this->cache       = new WRA_Feed_Cache();
 
 		add_shortcode( 'curated_rss', array( $this, 'render' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'register_assets' ) );
+		add_action( WRA_Feed_Cache::REFRESH_HOOK, array( $this, 'refresh_feed_items' ) );
 	}
 
 	/**
 	 * Fetch items from whichever source the params select.
 	 *
-	 * Single fetch path shared by render() and the AJAX load-more handler so the
-	 * source-selection logic exists in exactly one place.
+	 * For the initial render of a live feed (offset 0) this serves cached items
+	 * immediately and refreshes them in the background (stale-while-revalidate),
+	 * so a visitor never blocks on a live RSS fetch. Load-more requests
+	 * (offset > 0) and post-source reads fetch directly.
 	 *
 	 * @param array $params Display/source params (shortcode atts or AJAX params).
 	 * @param int   $limit  Number of items to request.
@@ -59,18 +70,47 @@ class WRA_Shortcode {
 	 * @return array Normalized items (WRA_Item shape).
 	 */
 	private function fetch_items( $params, $limit, $offset ) {
+		$args = $this->build_fetch_args( $params, $limit, $offset );
+
+		// Stale-while-revalidate only for the first screen of a live feed; the DB
+		// post source is already fast, and load-more is a deliberate user action.
+		if ( 'feed' === $args['source'] && 0 === (int) $offset ) {
+			$fresh_window = max( MINUTE_IN_SECONDS, absint( $args['cache_minutes'] ) * MINUTE_IN_SECONDS );
+			return $this->cache->get(
+				$args,
+				$fresh_window,
+				function () use ( $args ) {
+					return $this->run_fetch( $args );
+				}
+			);
+		}
+
+		return $this->run_fetch( $args );
+	}
+
+	/**
+	 * Build the resolved fetch-argument array for a set of display params.
+	 *
+	 * The returned array doubles as the cache key and the background-refresh
+	 * payload, so it must be fully resolved and serializable.
+	 *
+	 * @param array $params Display/source params.
+	 * @param int   $limit  Items to request.
+	 * @param int   $offset Items to skip.
+	 * @return array
+	 */
+	private function build_fetch_args( $params, $limit, $offset ) {
 		$source          = isset( $params['source'] ) && 'posts' === $params['source'] ? 'posts' : 'feed';
 		$fallback_images = $this->repo->get_fallback_images();
 
 		if ( 'posts' === $source ) {
-			return $this->post_source->get_items(
-				array(
-					'limit'           => $limit,
-					'offset'          => $offset,
-					'post_type'       => sanitize_key( isset( $params['post_type'] ) ? $params['post_type'] : 'post' ),
-					'post_status'     => sanitize_key( isset( $params['post_status'] ) ? $params['post_status'] : 'publish' ),
-					'fallback_images' => $fallback_images,
-				)
+			return array(
+				'source'          => 'posts',
+				'limit'           => (int) $limit,
+				'offset'          => (int) $offset,
+				'post_type'       => sanitize_key( isset( $params['post_type'] ) ? $params['post_type'] : 'post' ),
+				'post_status'     => sanitize_key( isset( $params['post_status'] ) ? $params['post_status'] : 'publish' ),
+				'fallback_images' => $fallback_images,
 			);
 		}
 
@@ -85,21 +125,45 @@ class WRA_Shortcode {
 
 		$settings = $this->repo->get_settings();
 
-		return $this->fetcher->get_items(
-			array(
-				'urls'             => $this->parse_feeds( $feed_source ),
-				'limit'            => $limit,
-				'offset'           => $offset,
-				'per_feed'         => absint( isset( $params['per_feed'] ) ? $params['per_feed'] : 0 ),
-				'cache_minutes'    => absint( $settings['cache_minutes'] ),
-				'fallback_images'  => $fallback_images,
-				'include_keywords' => sanitize_text_field( isset( $params['include_keywords'] ) ? $params['include_keywords'] : '' ),
-				'exclude_keywords' => sanitize_text_field( isset( $params['exclude_keywords'] ) ? $params['exclude_keywords'] : '' ),
-				'affiliate_name'   => sanitize_key( isset( $params['affiliate_name'] ) ? $params['affiliate_name'] : '' ),
-				'affiliate_value'  => sanitize_text_field( isset( $params['affiliate_value'] ) ? $params['affiliate_value'] : '' ),
-				'amazon_tag'       => sanitize_text_field( isset( $params['amazon_tag'] ) ? $params['amazon_tag'] : '' ),
-			)
+		return array(
+			'source'           => 'feed',
+			'urls'             => $this->parse_feeds( $feed_source ),
+			'limit'            => (int) $limit,
+			'offset'           => (int) $offset,
+			'per_feed'         => absint( isset( $params['per_feed'] ) ? $params['per_feed'] : 0 ),
+			'cache_minutes'    => absint( $settings['cache_minutes'] ),
+			'fallback_images'  => $fallback_images,
+			'include_keywords' => sanitize_text_field( isset( $params['include_keywords'] ) ? $params['include_keywords'] : '' ),
+			'exclude_keywords' => sanitize_text_field( isset( $params['exclude_keywords'] ) ? $params['exclude_keywords'] : '' ),
+			'affiliate_name'   => sanitize_key( isset( $params['affiliate_name'] ) ? $params['affiliate_name'] : '' ),
+			'affiliate_value'  => sanitize_text_field( isset( $params['affiliate_value'] ) ? $params['affiliate_value'] : '' ),
+			'amazon_tag'       => sanitize_text_field( isset( $params['amazon_tag'] ) ? $params['amazon_tag'] : '' ),
 		);
+	}
+
+	/**
+	 * Run a live fetch for resolved args against the selected source.
+	 *
+	 * @param array $args Resolved fetch args from build_fetch_args().
+	 * @return array
+	 */
+	public function run_fetch( $args ) {
+		if ( isset( $args['source'] ) && 'posts' === $args['source'] ) {
+			return $this->post_source->get_items( $args );
+		}
+		return $this->fetcher->get_items( $args );
+	}
+
+	/**
+	 * Background cron handler: re-fetch a stale feed entry and re-cache it.
+	 *
+	 * @param array $args Resolved fetch args carried by the scheduled event.
+	 */
+	public function refresh_feed_items( $args ) {
+		if ( ! is_array( $args ) || ! isset( $args['source'] ) || 'feed' !== $args['source'] ) {
+			return;
+		}
+		$this->cache->store( $this->cache->key( $args ), $this->run_fetch( $args ) );
 	}
 
 	/**

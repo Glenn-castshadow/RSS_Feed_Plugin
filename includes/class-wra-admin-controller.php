@@ -383,13 +383,15 @@ class WRA_Admin_Controller {
 	 */
 	private function flush_feed_cache() {
 		global $wpdb;
-		$like_value   = $wpdb->esc_like( '_transient_feed_' ) . '%';
-		$like_timeout = $wpdb->esc_like( '_transient_timeout_feed_' ) . '%';
+		// Raw SimplePie feed transients and the plugin's stale-while-revalidate
+		// item-cache transients (WRA_Feed_Cache::PREFIX).
 		$wpdb->query(
 			$wpdb->prepare(
-				"DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
-				$like_value,
-				$like_timeout
+				"DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s OR option_name LIKE %s OR option_name LIKE %s",
+				$wpdb->esc_like( '_transient_feed_' ) . '%',
+				$wpdb->esc_like( '_transient_timeout_feed_' ) . '%',
+				$wpdb->esc_like( '_transient_' . WRA_Feed_Cache::PREFIX ) . '%',
+				$wpdb->esc_like( '_transient_timeout_' . WRA_Feed_Cache::PREFIX ) . '%'
 			)
 		);
 	}

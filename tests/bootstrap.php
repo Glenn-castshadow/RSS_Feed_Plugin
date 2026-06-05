@@ -69,6 +69,12 @@ if ( ! function_exists( 'absint' ) ) {
 	}
 }
 
+if ( ! function_exists( 'wp_json_encode' ) ) {
+	function wp_json_encode( $data, $options = 0, $depth = 512 ) {
+		return json_encode( $data, $options, $depth );
+	}
+}
+
 // Load the classes under test.
 require_once dirname( __DIR__ ) . '/includes/class-wra-item.php';
 require_once dirname( __DIR__ ) . '/includes/class-wra-item-source.php';
@@ -76,6 +82,7 @@ require_once dirname( __DIR__ ) . '/includes/class-wra-feed-filter.php';
 require_once dirname( __DIR__ ) . '/includes/class-wra-settings-repository.php';
 require_once dirname( __DIR__ ) . '/includes/class-wra-feed-fetcher.php';
 require_once dirname( __DIR__ ) . '/includes/class-wra-feed-warmer.php';
+require_once dirname( __DIR__ ) . '/includes/class-wra-feed-cache.php';
 require_once dirname( __DIR__ ) . '/includes/class-wra-full-text-extractor.php';
 require_once dirname( __DIR__ ) . '/includes/class-wra-post-source.php';
 
