@@ -3,7 +3,7 @@ Contributors: castshadow
 Tags: rss, feed, aggregator, news, import
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 1.2.4
+Stable tag: 1.2.5
 Requires PHP: 7.4
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -79,6 +79,11 @@ Use the Export / Import Settings panel (collapsed under the Display Feeds sectio
 4. Frontend grid layout with shadow card style.
 
 == Changelog ==
+
+= 1.2.5 =
+* Internal: refactored plugin architecture — extracted a settings repository, a feed-filter class, a shared item-source interface, and split the admin screen into a controller and a view. No functional changes.
+* Run logs are now stored separately from import-job config (auto-migrated on upgrade), avoiding a concurrent-write race during scheduled imports.
+* Hardened OPML import parsing (no network access during XML parse).
 
 = 1.2.3 =
 * Added advanced import filters with all/any matching across title, description, content, author, image, source feed, and date fields.

@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-class WRA_Feed_Fetcher {
+class WRA_Feed_Fetcher implements WRA_Item_Source {
 	/**
 	 * Current feed cache lifetime.
 	 *
@@ -18,17 +18,33 @@ class WRA_Feed_Fetcher {
 	private $cache_lifetime = HOUR_IN_SECONDS;
 
 	/**
-	 * Fetch feed items from one or more URLs.
+	 * Keyword/date/advanced filter evaluator.
 	 *
-	 * @param array  $urls        Feed URLs.
-	 * @param array  $args        Fetch args.
-	 * @param array  $feed_errors Optional. Populated with [ url => error_message ] for each failed feed.
+	 * @var WRA_Feed_Filter
+	 */
+	private $filter;
+
+	/**
+	 * Constructor.
+	 *
+	 * @param WRA_Feed_Filter|null $filter Optional filter; one is created when omitted.
+	 */
+	public function __construct( ?WRA_Feed_Filter $filter = null ) {
+		$this->filter = $filter ? $filter : new WRA_Feed_Filter();
+	}
+
+	/**
+	 * Fetch and normalize feed items.
+	 *
+	 * @param array $args        Fetch args. Feed URLs travel in $args['urls'].
+	 * @param array $feed_errors Optional. Populated with [ url => error_message ] for each failed feed.
 	 * @return array
 	 */
-	public function get_items( $urls, $args = array(), &$feed_errors = array() ) {
+	public function get_items( $args = array(), &$feed_errors = array() ) {
 		$args = wp_parse_args(
 			$args,
 			array(
+				'urls'             => array(),
 				'limit'            => 10,
 				'offset'           => 0,
 				'per_feed'         => 0,
@@ -47,7 +63,7 @@ class WRA_Feed_Fetcher {
 		);
 
 		$items = array();
-		$urls  = array_filter( array_map( 'esc_url_raw', (array) $urls ) );
+		$urls  = array_filter( array_map( 'esc_url_raw', (array) $args['urls'] ) );
 
 		if ( empty( $urls ) ) {
 			return $items;
@@ -77,7 +93,7 @@ class WRA_Feed_Fetcher {
 			foreach ( $feed->get_items( 0, $max_items ) as $item ) {
 				$normalized = $this->normalize_item( $item, $url, $args );
 
-				if ( $this->passes_filters( $normalized, $args ) ) {
+				if ( $this->filter->passes( $normalized, $args ) ) {
 					$items[] = $normalized;
 				}
 			}
@@ -210,167 +226,20 @@ class WRA_Feed_Fetcher {
 			$image = ! empty( $pool ) ? $pool[ array_rand( $pool ) ] : '';
 		}
 
-		return array(
-			'title'       => wp_strip_all_tags( $item->get_title() ),
-			'link'        => esc_url_raw( $link ),
-			'guid'        => $item->get_id() ? sanitize_text_field( $item->get_id() ) : md5( $source_url . '|' . $link ),
-			'date'        => $item->get_date( get_option( 'date_format' ) ),
-			'timestamp'   => $item->get_date( 'U' ) ? (int) $item->get_date( 'U' ) : time(),
-			'author'      => $item->get_author() ? sanitize_text_field( $item->get_author()->get_name() ) : '',
-			'excerpt'     => wp_trim_words( wp_strip_all_tags( $description ), 35 ),
-			'content'     => wp_kses_post( $content ? $content : $description ),
-			'image'       => esc_url_raw( $image ),
-			'source_feed' => esc_url_raw( $source_url ),
+		return WRA_Item::create(
+			array(
+				'title'       => wp_strip_all_tags( $item->get_title() ),
+				'link'        => esc_url_raw( $link ),
+				'guid'        => $item->get_id() ? sanitize_text_field( $item->get_id() ) : md5( $source_url . '|' . $link ),
+				'date'        => $item->get_date( get_option( 'date_format' ) ),
+				'timestamp'   => $item->get_date( 'U' ) ? (int) $item->get_date( 'U' ) : time(),
+				'author'      => $item->get_author() ? sanitize_text_field( $item->get_author()->get_name() ) : '',
+				'excerpt'     => wp_trim_words( wp_strip_all_tags( $description ), 35 ),
+				'content'     => wp_kses_post( $content ? $content : $description ),
+				'image'       => esc_url_raw( $image ),
+				'source_feed' => esc_url_raw( $source_url ),
+			)
 		);
-	}
-
-	/**
-	 * Determine if item passes keyword and date filters.
-	 *
-	 * @param array $item Item.
-	 * @param array $args Args.
-	 * @return bool
-	 */
-	private function passes_filters( $item, $args ) {
-		$haystack = strtolower( $item['title'] . ' ' . wp_strip_all_tags( $item['content'] ) . ' ' . $item['excerpt'] );
-
-		$include_keywords = $this->split_keywords( $args['include_keywords'] );
-		if ( ! empty( $include_keywords ) ) {
-			$matched = false;
-			foreach ( $include_keywords as $keyword ) {
-				if ( false !== strpos( $haystack, strtolower( $keyword ) ) ) {
-					$matched = true;
-					break;
-				}
-			}
-			if ( ! $matched ) {
-				return false;
-			}
-		}
-
-		foreach ( $this->split_keywords( $args['exclude_keywords'] ) as $keyword ) {
-			if ( false !== strpos( $haystack, strtolower( $keyword ) ) ) {
-				return false;
-			}
-		}
-
-		if ( ! empty( $args['date_after'] ) && strtotime( $args['date_after'] ) > $item['timestamp'] ) {
-			return false;
-		}
-
-		if ( ! empty( $args['date_before'] ) && strtotime( $args['date_before'] . ' 23:59:59' ) < $item['timestamp'] ) {
-			return false;
-		}
-
-		if ( ! empty( $args['advanced_filters'] ) && is_array( $args['advanced_filters'] ) ) {
-			$mode    = isset( $args['advanced_mode'] ) && 'any' === $args['advanced_mode'] ? 'any' : 'all';
-			$matched = 0;
-			$total   = 0;
-
-			foreach ( $args['advanced_filters'] as $filter ) {
-				if ( empty( $filter['field'] ) || empty( $filter['operator'] ) ) {
-					continue;
-				}
-
-				$total++;
-				if ( $this->matches_advanced_filter( $item, $filter ) ) {
-					$matched++;
-				} elseif ( 'all' === $mode ) {
-					return false;
-				}
-			}
-
-			if ( $total > 0 && 'any' === $mode && 0 === $matched ) {
-				return false;
-			}
-		}
-
-		return true;
-	}
-
-	/**
-	 * Determine whether an item matches a structured import filter.
-	 *
-	 * @param array $item   Item.
-	 * @param array $filter Filter config.
-	 * @return bool
-	 */
-	private function matches_advanced_filter( $item, $filter ) {
-		$field    = isset( $filter['field'] ) ? sanitize_key( $filter['field'] ) : '';
-		$operator = isset( $filter['operator'] ) ? sanitize_key( $filter['operator'] ) : '';
-		$needle   = isset( $filter['value'] ) ? (string) $filter['value'] : '';
-		$value    = $this->get_filter_value( $item, $field );
-
-		if ( in_array( $operator, array( 'empty', 'not_empty' ), true ) ) {
-			$is_empty = '' === trim( wp_strip_all_tags( (string) $value ) );
-			return 'empty' === $operator ? $is_empty : ! $is_empty;
-		}
-
-		if ( 'date_after' === $operator || 'date_before' === $operator ) {
-			$needle_time = strtotime( $needle );
-			$item_time   = 'date' === $field ? (int) $item['timestamp'] : strtotime( $value );
-			if ( ! $needle_time || ! $item_time ) {
-				return false;
-			}
-			return 'date_after' === $operator ? $item_time >= $needle_time : $item_time <= $needle_time;
-		}
-
-		$value_text  = strtolower( wp_strip_all_tags( (string) $value ) );
-		$needle_text = strtolower( wp_strip_all_tags( $needle ) );
-
-		switch ( $operator ) {
-			case 'contains':
-				return '' !== $needle_text && false !== strpos( $value_text, $needle_text );
-			case 'not_contains':
-				return '' === $needle_text || false === strpos( $value_text, $needle_text );
-			case 'equals':
-				return $value_text === $needle_text;
-			case 'not_equals':
-				return $value_text !== $needle_text;
-			case 'regex':
-				return '' !== $needle && 1 === @preg_match( '/' . str_replace( '/', '\/', $needle ) . '/i', (string) $value );
-		}
-
-		return true;
-	}
-
-	/**
-	 * Get an item field value for structured filtering.
-	 *
-	 * @param array  $item  Item.
-	 * @param string $field Field key.
-	 * @return string
-	 */
-	private function get_filter_value( $item, $field ) {
-		switch ( $field ) {
-			case 'title':
-			case 'author':
-			case 'excerpt':
-			case 'content':
-			case 'image':
-			case 'source_feed':
-				return isset( $item[ $field ] ) ? (string) $item[ $field ] : '';
-			case 'description':
-				return isset( $item['excerpt'] ) ? (string) $item['excerpt'] : '';
-			case 'date':
-				return isset( $item['date'] ) ? (string) $item['date'] : '';
-		}
-
-		return '';
-	}
-
-	/**
-	 * Split comma or line separated keywords.
-	 *
-	 * @param string $keywords Keywords.
-	 * @return array
-	 */
-	private function split_keywords( $keywords ) {
-		if ( empty( $keywords ) ) {
-			return array();
-		}
-
-		return array_filter( array_map( 'trim', preg_split( '/[\r\n,]+/', (string) $keywords ) ) );
 	}
 
 	/**

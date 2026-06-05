@@ -16,6 +16,8 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 // Plugin options.
 delete_option( 'wra_settings' );
 delete_option( 'wra_import_jobs' );
+delete_option( 'wra_feed_lists' );
+delete_option( 'wra_job_logs' );
 
 // Scheduled cron event.
 wp_clear_scheduled_hook( 'wra_run_import_jobs' );

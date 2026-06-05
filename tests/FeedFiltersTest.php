@@ -1,9 +1,9 @@
 <?php
 /**
- * Unit tests for WRA_Feed_Fetcher keyword/date filter logic.
+ * Unit tests for WRA_Feed_Filter keyword/date/advanced filter logic.
  *
- * These tests exercise the private passes_filters() method via reflection so
- * changes to the filtering logic can be caught before a release.
+ * The filtering rules live in their own class with a public passes() method, so
+ * these tests call it directly rather than reaching through the fetcher.
  *
  * @package Curated_RSS_Aggregator
  */
@@ -12,31 +12,17 @@ use PHPUnit\Framework\TestCase;
 
 class FeedFiltersTest extends TestCase {
 
-	/** @var WRA_Feed_Fetcher */
-	private $fetcher;
-
-	/** @var ReflectionMethod */
-	private $passes_filters;
+	/** @var WRA_Feed_Filter */
+	private $filter;
 
 	protected function setUp(): void {
-		$this->fetcher        = new WRA_Feed_Fetcher();
-		$method               = new ReflectionMethod( WRA_Feed_Fetcher::class, 'passes_filters' );
-		$method->setAccessible( true );
-		$this->passes_filters = $method;
+		$this->filter = new WRA_Feed_Filter();
 	}
 
 	// ---- helpers -------------------------------------------------------
 
 	private function call( array $item, array $args ): bool {
-		$defaults = array(
-			'include_keywords' => '',
-			'exclude_keywords' => '',
-			'advanced_filters'  => array(),
-			'advanced_mode'     => 'all',
-			'date_after'       => '',
-			'date_before'      => '',
-		);
-		return $this->passes_filters->invoke( $this->fetcher, $item, array_merge( $defaults, $args ) );
+		return $this->filter->passes( $item, $args );
 	}
 
 	private function make_item( string $title, string $content = '', int $timestamp = 0 ): array {
