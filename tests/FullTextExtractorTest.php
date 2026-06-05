@@ -7,7 +7,7 @@
 
 use PHPUnit\Framework\TestCase;
 
-class Test_Full_Text_Extractor extends TestCase {
+class FullTextExtractorTest extends TestCase {
 
 	/** @var WRA_Full_Text_Extractor */
 	private $extractor;

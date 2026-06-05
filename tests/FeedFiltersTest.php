@@ -10,7 +10,7 @@
 
 use PHPUnit\Framework\TestCase;
 
-class Test_Feed_Filters extends TestCase {
+class FeedFiltersTest extends TestCase {
 
 	/** @var WRA_Feed_Fetcher */
 	private $fetcher;

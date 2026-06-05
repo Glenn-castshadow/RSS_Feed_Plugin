@@ -1,0 +1,14 @@
+{
+    "name": "castshadow/curated-rss-aggregator",
+    "description": "Curated RSS Aggregator WordPress plugin",
+    "type": "wordpress-plugin",
+    "require-dev": {
+        "phpunit/phpunit": "^10.0"
+    },
+    "autoload-dev": {
+        "classmap": ["tests/"]
+    },
+    "config": {
+        "allow-plugins": {}
+    }
+}
