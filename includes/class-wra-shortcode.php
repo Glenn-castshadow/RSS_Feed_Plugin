@@ -18,12 +18,21 @@ class WRA_Shortcode {
 	private $fetcher;
 
 	/**
+	 * Post-based source.
+	 *
+	 * @var WRA_Post_Source
+	 */
+	private $post_source;
+
+	/**
 	 * Constructor.
 	 *
-	 * @param WRA_Feed_Fetcher $fetcher Feed fetcher.
+	 * @param WRA_Feed_Fetcher $fetcher      Feed fetcher.
+	 * @param WRA_Post_Source  $post_source  Post-based source.
 	 */
-	public function __construct( WRA_Feed_Fetcher $fetcher ) {
-		$this->fetcher = $fetcher;
+	public function __construct( WRA_Feed_Fetcher $fetcher, WRA_Post_Source $post_source ) {
+		$this->fetcher      = $fetcher;
+		$this->post_source  = $post_source;
 
 		add_shortcode( 'curated_rss', array( $this, 'render' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'register_assets' ) );
@@ -78,6 +87,9 @@ class WRA_Shortcode {
 				'affiliate_name'   => $settings['affiliate_name'],
 				'affiliate_value'  => $settings['affiliate_value'],
 				'amazon_tag'       => $settings['amazon_tag'],
+				'source'           => 'feed',
+				'post_type'        => 'post',
+				'post_status'      => 'publish',
 			),
 			$atts,
 			'curated_rss'
@@ -95,20 +107,34 @@ class WRA_Shortcode {
 		$limit          = max( 1, absint( $atts['items'] ) );
 		$show_load_more = 'yes' === $atts['show_load_more'];
 
-		$items = $this->fetcher->get_items(
-			$urls,
-			array(
-				'limit'            => $show_load_more ? $limit + 1 : $limit,
-				'per_feed'         => absint( $atts['per_feed'] ),
-				'cache_minutes'    => absint( $settings['cache_minutes'] ),
-				'fallback_images'  => WRA_Plugin::get_fallback_images(),
-				'include_keywords' => sanitize_text_field( $atts['include_keywords'] ),
-				'exclude_keywords' => sanitize_text_field( $atts['exclude_keywords'] ),
-				'affiliate_name'   => sanitize_key( $atts['affiliate_name'] ),
-				'affiliate_value'  => sanitize_text_field( $atts['affiliate_value'] ),
-				'amazon_tag'       => sanitize_text_field( $atts['amazon_tag'] ),
-			)
-		);
+		$source = 'posts' === $atts['source'] ? 'posts' : 'feed';
+
+		if ( 'posts' === $source ) {
+			$items = $this->post_source->get_items(
+				array(
+					'limit'           => $show_load_more ? $limit + 1 : $limit,
+					'offset'          => 0,
+					'post_type'       => sanitize_key( $atts['post_type'] ),
+					'post_status'     => sanitize_key( $atts['post_status'] ),
+					'fallback_images' => WRA_Plugin::get_fallback_images(),
+				)
+			);
+		} else {
+			$items = $this->fetcher->get_items(
+				$urls,
+				array(
+					'limit'            => $show_load_more ? $limit + 1 : $limit,
+					'per_feed'         => absint( $atts['per_feed'] ),
+					'cache_minutes'    => absint( $settings['cache_minutes'] ),
+					'fallback_images'  => WRA_Plugin::get_fallback_images(),
+					'include_keywords' => sanitize_text_field( $atts['include_keywords'] ),
+					'exclude_keywords' => sanitize_text_field( $atts['exclude_keywords'] ),
+					'affiliate_name'   => sanitize_key( $atts['affiliate_name'] ),
+					'affiliate_value'  => sanitize_text_field( $atts['affiliate_value'] ),
+					'amazon_tag'       => sanitize_text_field( $atts['amazon_tag'] ),
+				)
+			);
+		}
 
 		$has_more = false;
 
@@ -210,31 +236,45 @@ class WRA_Shortcode {
 		$limit    = max( 1, absint( isset( $params['items'] ) ? $params['items'] : 6 ) );
 		$settings = WRA_Plugin::get_settings();
 
-		$feed_source = isset( $params['feeds'] ) ? $params['feeds'] : '';
-		if ( ! empty( $params['feed_list'] ) ) {
-			$lists   = WRA_Plugin::get_feed_lists();
-			$list_id = sanitize_key( $params['feed_list'] );
-			if ( isset( $lists[ $list_id ] ) ) {
-				$feed_source = $lists[ $list_id ]['feeds'];
-			}
-		}
-		$urls = $this->parse_feeds( $feed_source );
+		$source = isset( $params['source'] ) && 'posts' === $params['source'] ? 'posts' : 'feed';
 
-		$items = $this->fetcher->get_items(
-			$urls,
-			array(
-				'limit'            => $limit + 1,
-				'offset'           => $offset,
-				'per_feed'         => absint( isset( $params['per_feed'] ) ? $params['per_feed'] : 0 ),
-				'cache_minutes'    => absint( $settings['cache_minutes'] ),
-				'fallback_images'  => WRA_Plugin::get_fallback_images(),
-				'include_keywords' => sanitize_text_field( isset( $params['include_keywords'] ) ? $params['include_keywords'] : '' ),
-				'exclude_keywords' => sanitize_text_field( isset( $params['exclude_keywords'] ) ? $params['exclude_keywords'] : '' ),
-				'affiliate_name'   => sanitize_key( isset( $params['affiliate_name'] ) ? $params['affiliate_name'] : '' ),
-				'affiliate_value'  => sanitize_text_field( isset( $params['affiliate_value'] ) ? $params['affiliate_value'] : '' ),
-				'amazon_tag'       => sanitize_text_field( isset( $params['amazon_tag'] ) ? $params['amazon_tag'] : '' ),
-			)
-		);
+		if ( 'posts' === $source ) {
+			$items = $this->post_source->get_items(
+				array(
+					'limit'           => $limit + 1,
+					'offset'          => $offset,
+					'post_type'       => sanitize_key( isset( $params['post_type'] ) ? $params['post_type'] : 'post' ),
+					'post_status'     => sanitize_key( isset( $params['post_status'] ) ? $params['post_status'] : 'publish' ),
+					'fallback_images' => WRA_Plugin::get_fallback_images(),
+				)
+			);
+		} else {
+			$feed_source = isset( $params['feeds'] ) ? $params['feeds'] : '';
+			if ( ! empty( $params['feed_list'] ) ) {
+				$lists   = WRA_Plugin::get_feed_lists();
+				$list_id = sanitize_key( $params['feed_list'] );
+				if ( isset( $lists[ $list_id ] ) ) {
+					$feed_source = $lists[ $list_id ]['feeds'];
+				}
+			}
+			$urls = $this->parse_feeds( $feed_source );
+
+			$items = $this->fetcher->get_items(
+				$urls,
+				array(
+					'limit'            => $limit + 1,
+					'offset'           => $offset,
+					'per_feed'         => absint( isset( $params['per_feed'] ) ? $params['per_feed'] : 0 ),
+					'cache_minutes'    => absint( $settings['cache_minutes'] ),
+					'fallback_images'  => WRA_Plugin::get_fallback_images(),
+					'include_keywords' => sanitize_text_field( isset( $params['include_keywords'] ) ? $params['include_keywords'] : '' ),
+					'exclude_keywords' => sanitize_text_field( isset( $params['exclude_keywords'] ) ? $params['exclude_keywords'] : '' ),
+					'affiliate_name'   => sanitize_key( isset( $params['affiliate_name'] ) ? $params['affiliate_name'] : '' ),
+					'affiliate_value'  => sanitize_text_field( isset( $params['affiliate_value'] ) ? $params['affiliate_value'] : '' ),
+					'amazon_tag'       => sanitize_text_field( isset( $params['amazon_tag'] ) ? $params['amazon_tag'] : '' ),
+				)
+			);
+		}
 
 		$has_more = count( $items ) > $limit;
 		if ( $has_more ) {
@@ -365,6 +405,9 @@ class WRA_Shortcode {
 			'affiliate_name'   => $atts['affiliate_name'],
 			'affiliate_value'  => $atts['affiliate_value'],
 			'amazon_tag'       => $atts['amazon_tag'],
+			'source'           => $atts['source'],
+			'post_type'        => $atts['post_type'],
+			'post_status'      => $atts['post_status'],
 		);
 	}
 
