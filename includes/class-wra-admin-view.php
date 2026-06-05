@@ -50,7 +50,6 @@ class WRA_Admin_View {
 		$edit_job  = $this->get_edit_job( $jobs );
 		$edit_list = $this->get_edit_list( $lists );
 		$edit_log  = $edit_job && isset( $all_logs[ $edit_job['id'] ] ) ? (array) $all_logs[ $edit_job['id'] ] : array();
-		$preview   = $this->get_preview_items( $settings );
 		?>
 		<div class="wrap wra-admin">
 			<h1><?php esc_html_e( 'Curated RSS Aggregator', 'curated-rss-aggregator' ); ?></h1>
@@ -235,18 +234,14 @@ class WRA_Admin_View {
 					</table>
 
 					<h3><?php esc_html_e( 'Feed Health', 'curated-rss-aggregator' ); ?></h3>
-					<?php $this->render_feed_health( $settings ); ?>
+					<div class="wra-lazy-panel" data-wra-panel="feed_health">
+						<p class="description"><?php esc_html_e( 'Loading…', 'curated-rss-aggregator' ); ?></p>
+					</div>
 
 					<h3><?php esc_html_e( 'Preview', 'curated-rss-aggregator' ); ?></h3>
-					<?php if ( empty( $preview ) ) : ?>
-						<p><?php esc_html_e( 'Add feed URLs and save settings to preview items.', 'curated-rss-aggregator' ); ?></p>
-					<?php else : ?>
-						<ul class="wra-preview">
-							<?php foreach ( $preview as $item ) : ?>
-								<li><a href="<?php echo esc_url( $item['link'] ); ?>" target="_blank" rel="noopener"><?php echo esc_html( $item['title'] ); ?></a></li>
-							<?php endforeach; ?>
-						</ul>
-					<?php endif; ?>
+					<div class="wra-lazy-panel" data-wra-panel="preview">
+						<p class="description"><?php esc_html_e( 'Loading…', 'curated-rss-aggregator' ); ?></p>
+					</div>
 				</section>
 			</div>
 
@@ -548,6 +543,55 @@ class WRA_Admin_View {
 				'fallback_images' => $this->repo->get_fallback_images(),
 			)
 		);
+	}
+
+	/**
+	 * AJAX: render the feed-health table.
+	 *
+	 * Loaded lazily after the admin page paints so the synchronous per-feed
+	 * fetch never blocks the initial page render.
+	 */
+	public function ajax_feed_health() {
+		$this->guard_panel_request();
+		$this->render_feed_health( $this->repo->get_settings() );
+		wp_die();
+	}
+
+	/**
+	 * AJAX: render the feed preview list. Lazily loaded (see ajax_feed_health).
+	 */
+	public function ajax_preview() {
+		$this->guard_panel_request();
+		$this->render_preview( $this->get_preview_items( $this->repo->get_settings() ) );
+		wp_die();
+	}
+
+	/**
+	 * Reject lazy-panel AJAX requests without the capability or a valid nonce.
+	 */
+	private function guard_panel_request() {
+		if ( ! current_user_can( 'manage_options' ) || ! check_ajax_referer( 'wra_admin_panels', 'nonce', false ) ) {
+			wp_die( '', '', array( 'response' => 403 ) );
+		}
+	}
+
+	/**
+	 * Render the feed preview list.
+	 *
+	 * @param array $preview Preview items.
+	 */
+	private function render_preview( $preview ) {
+		if ( empty( $preview ) ) {
+			echo '<p>' . esc_html__( 'Add feed URLs and save settings to preview items.', 'curated-rss-aggregator' ) . '</p>';
+			return;
+		}
+		?>
+		<ul class="wra-preview">
+			<?php foreach ( $preview as $item ) : ?>
+				<li><a href="<?php echo esc_url( $item['link'] ); ?>" target="_blank" rel="noopener"><?php echo esc_html( $item['title'] ); ?></a></li>
+			<?php endforeach; ?>
+		</ul>
+		<?php
 	}
 
 	/**

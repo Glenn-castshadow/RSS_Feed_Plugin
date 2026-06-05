@@ -75,6 +75,7 @@ require_once dirname( __DIR__ ) . '/includes/class-wra-item-source.php';
 require_once dirname( __DIR__ ) . '/includes/class-wra-feed-filter.php';
 require_once dirname( __DIR__ ) . '/includes/class-wra-settings-repository.php';
 require_once dirname( __DIR__ ) . '/includes/class-wra-feed-fetcher.php';
+require_once dirname( __DIR__ ) . '/includes/class-wra-feed-warmer.php';
 require_once dirname( __DIR__ ) . '/includes/class-wra-full-text-extractor.php';
 require_once dirname( __DIR__ ) . '/includes/class-wra-post-source.php';
 

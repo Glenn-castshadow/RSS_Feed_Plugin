@@ -60,10 +60,15 @@ class WRA_Plugin {
 		self::$shortcode = new WRA_Shortcode( $fetcher, $post_source, $repo );
 		new WRA_Admin( $fetcher, $importer, $repo );
 
+		$warmer = new WRA_Feed_Warmer( $fetcher, $repo );
+
 		add_action( 'init', array( __CLASS__, 'register_block' ) );
 		add_action( 'init', array( __CLASS__, 'migrate_cron_schedule' ) );
 		add_action( 'elementor/widgets/register', array( __CLASS__, 'register_elementor_widget' ) );
 		add_action( self::CRON_HOOK, array( $importer, 'run_scheduled_jobs' ) );
+		// Refresh the display-feed cache on the same schedule so visitor-facing
+		// renders read a warm cache instead of fetching feeds inline.
+		add_action( self::CRON_HOOK, array( $warmer, 'warm' ) );
 		add_filter( 'cron_schedules', array( __CLASS__, 'add_cron_schedules' ) );
 		add_action( 'wp_ajax_wra_load_more', array( self::$shortcode, 'ajax_load_more' ) );
 		add_action( 'wp_ajax_nopriv_wra_load_more', array( self::$shortcode, 'ajax_load_more' ) );

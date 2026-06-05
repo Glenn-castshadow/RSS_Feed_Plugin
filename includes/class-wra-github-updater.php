@@ -207,7 +207,9 @@ class WRA_GitHub_Updater {
 		$response = wp_remote_get(
 			'https://api.github.com/repos/' . self::GITHUB_REPO . '/releases/latest',
 			array(
-				'timeout' => 10,
+				// Keep this short: it runs during admin update checks, so a slow
+				// GitHub response must never stall the Plugins screen for long.
+				'timeout' => 3,
 				'headers' => array(
 					'Accept'     => 'application/vnd.github.v3+json',
 					'User-Agent' => 'WordPress/' . get_bloginfo( 'version' ) . '; ' . home_url(),

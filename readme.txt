@@ -3,7 +3,7 @@ Contributors: castshadow
 Tags: rss, feed, aggregator, news, import
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 1.2.5
+Stable tag: 1.2.6
 Requires PHP: 7.4
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -79,6 +79,11 @@ Use the Export / Import Settings panel (collapsed under the Display Feeds sectio
 4. Frontend grid layout with shadow card style.
 
 == Changelog ==
+
+= 1.2.6 =
+* Performance: the admin screen no longer fetches feeds synchronously on load — the Feed Health and Preview panels now load lazily after the page paints, so the screen opens immediately.
+* Performance: the display-feed cache is now refreshed on the existing 15-minute cron, so front-end pages read a warm cache instead of fetching feeds inline during a visitor's request.
+* Performance: shortened the GitHub update-check timeout so a slow response can't stall the Plugins screen.
 
 = 1.2.5 =
 * Internal: refactored plugin architecture — extracted a settings repository, a feed-filter class, a shared item-source interface, and split the admin screen into a controller and a view. No functional changes.

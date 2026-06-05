@@ -11,6 +11,38 @@
 		}
 	} );
 
+	/* ── Lazy-load feed health + preview panels ─────────────────── */
+	/* These panels each fetch RSS feeds server-side, so loading them after the
+	   page paints keeps the admin screen from blocking on remote requests. */
+	if ( window.wra_admin && wra_admin.ajax_url ) {
+		document.querySelectorAll( '.wra-lazy-panel' ).forEach( function ( panel ) {
+			var name = panel.getAttribute( 'data-wra-panel' );
+			if ( ! name ) {
+				return;
+			}
+
+			var body = new URLSearchParams();
+			body.append( 'action', 'wra_' + name );
+			body.append( 'nonce', wra_admin.panels_nonce );
+
+			fetch( wra_admin.ajax_url, {
+				method:      'POST',
+				credentials: 'same-origin',
+				headers:     { 'Content-Type': 'application/x-www-form-urlencoded' },
+				body:        body.toString(),
+			} ).then( function ( response ) {
+				if ( ! response.ok ) {
+					throw new Error( 'HTTP ' + response.status );
+				}
+				return response.text();
+			} ).then( function ( html ) {
+				panel.innerHTML = html;
+			} ).catch( function () {
+				panel.innerHTML = '<p class="description">' + ( wra_admin.panel_error || 'Could not load this panel.' ) + '</p>';
+			} );
+		} );
+	}
+
 	/* ── Fallback image media picker ────────────────────────────── */
 	var addBtn  = document.getElementById( 'wra-add-fallback-image' );
 	var preview = document.getElementById( 'wra-fallback-images-preview' );

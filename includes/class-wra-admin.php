@@ -41,6 +41,11 @@ class WRA_Admin {
 		add_action( 'admin_menu', array( $this, 'add_menu' ) );
 		add_action( 'admin_init', array( $this->controller, 'handle' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
+
+		// Lazily-loaded admin panels (feed health + preview) keep their
+		// synchronous feed fetches off the initial page render.
+		add_action( 'wp_ajax_wra_feed_health', array( $this->view, 'ajax_feed_health' ) );
+		add_action( 'wp_ajax_wra_preview', array( $this->view, 'ajax_preview' ) );
 	}
 
 	/**
@@ -77,6 +82,9 @@ class WRA_Admin {
 			array(
 				'media_title'  => __( 'Select Fallback Images', 'curated-rss-aggregator' ),
 				'media_button' => __( 'Use these images', 'curated-rss-aggregator' ),
+				'ajax_url'     => admin_url( 'admin-ajax.php' ),
+				'panels_nonce' => wp_create_nonce( 'wra_admin_panels' ),
+				'panel_error'  => __( 'Could not load this panel.', 'curated-rss-aggregator' ),
 			)
 		);
 	}
