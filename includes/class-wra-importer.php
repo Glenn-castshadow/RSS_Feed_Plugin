@@ -32,14 +32,23 @@ class WRA_Importer {
 	private $ai_rewriter;
 
 	/**
+	 * Settings repository.
+	 *
+	 * @var WRA_Settings_Repository
+	 */
+	private $repo;
+
+	/**
 	 * Constructor.
 	 *
 	 * @param WRA_Feed_Fetcher             $fetcher     Feed fetcher.
+	 * @param WRA_Settings_Repository      $repo        Settings repository.
 	 * @param WRA_Full_Text_Extractor|null $extractor   Full-text extractor.
 	 * @param WRA_AI_Rewriter|null         $ai_rewriter AI rewriter.
 	 */
-	public function __construct( WRA_Feed_Fetcher $fetcher, $extractor = null, $ai_rewriter = null ) {
+	public function __construct( WRA_Feed_Fetcher $fetcher, WRA_Settings_Repository $repo, $extractor = null, $ai_rewriter = null ) {
 		$this->fetcher     = $fetcher;
+		$this->repo        = $repo;
 		$this->extractor   = $extractor;
 		$this->ai_rewriter = $ai_rewriter;
 	}
@@ -50,13 +59,14 @@ class WRA_Importer {
 	public function run_scheduled_jobs() {
 		$now = current_time( 'timestamp' );
 
-		foreach ( WRA_Plugin::get_import_jobs() as $job ) {
+		foreach ( $this->repo->get_import_jobs() as $job ) {
 			if ( empty( $job['enabled'] ) ) {
 				continue;
 			}
 
 			$frequency = isset( $job['frequency'] ) ? (int) $job['frequency'] : 30;
-			$last_run  = ! empty( $job['log'][0]['time'] ) ? strtotime( $job['log'][0]['time'] ) : 0;
+			$log       = ! empty( $job['id'] ) ? $this->repo->get_job_log( $job['id'] ) : array();
+			$last_run  = ! empty( $log[0]['time'] ) ? strtotime( $log[0]['time'] ) : 0;
 
 			if ( $now >= $last_run + $frequency * MINUTE_IN_SECONDS ) {
 				$this->run_job( $job );
@@ -71,18 +81,18 @@ class WRA_Importer {
 	 * @return array { imported: int, skipped: int, warnings: string[] }
 	 */
 	public function run_job( $job ) {
-		$settings    = WRA_Plugin::get_settings();
+		$settings    = $this->repo->get_settings();
 		$urls        = array_filter( array_map( 'trim', preg_split( '/[\r\n,]+/', (string) $job['feeds'] ) ) );
 		$feed_errors = array();
-		$fallbacks   = WRA_Plugin::get_fallback_images();
+		$fallbacks   = $this->repo->get_fallback_images();
 
 		if ( ! empty( $job['fallback_image_url'] ) ) {
 			array_unshift( $fallbacks, esc_url_raw( $job['fallback_image_url'] ) );
 		}
 
 		$items = $this->fetcher->get_items(
-			$urls,
 			array(
+				'urls'             => $urls,
 				'limit'            => absint( $job['limit'] ),
 				'cache_minutes'    => absint( $settings['cache_minutes'] ),
 				'fallback_images'  => $fallbacks,
@@ -130,25 +140,19 @@ class WRA_Importer {
 			}
 		}
 
-		// Append a log entry to this job (newest first, capped at 20).
-		// Re-fetch from DB right before writing to shrink the concurrent-write race window.
+		// Record this run in the dedicated log store (newest first, capped).
+		// Logs live apart from the jobs option so concurrent runs don't have to
+		// rewrite the whole jobs blob just to append a line.
 		if ( ! empty( $job['id'] ) ) {
-			wp_cache_delete( WRA_Plugin::IMPORTS_OPTION, 'options' );
-			$all_jobs = WRA_Plugin::get_import_jobs();
-			if ( isset( $all_jobs[ $job['id'] ] ) ) {
-				$log = isset( $all_jobs[ $job['id'] ]['log'] ) ? (array) $all_jobs[ $job['id'] ]['log'] : array();
-				array_unshift(
-					$log,
-					array(
-						'time'     => current_time( 'mysql' ),
-						'imported' => $result['imported'],
-						'skipped'  => $result['skipped'],
-						'warnings' => array_slice( $result['warnings'], 0, 20 ),
-					)
-				);
-				$all_jobs[ $job['id'] ]['log'] = array_slice( $log, 0, 20 );
-				update_option( WRA_Plugin::IMPORTS_OPTION, $all_jobs );
-			}
+			$this->repo->append_job_log(
+				$job['id'],
+				array(
+					'time'     => current_time( 'mysql' ),
+					'imported' => $result['imported'],
+					'skipped'  => $result['skipped'],
+					'warnings' => array_slice( $result['warnings'], 0, WRA_Settings_Repository::LOG_CAP ),
+				)
+			);
 		}
 
 		return $result;

@@ -50,6 +50,11 @@ class WRA_Full_Text_Extractor {
 	 *
 	 * Returns an empty string on failure so callers can fall back to feed content.
 	 *
+	 * Trust boundary: $url originates from feed content, so this performs a
+	 * server-side GET to a feed-controlled address (an inherent SSRF surface of
+	 * the full-text-extraction feature). It is only reachable from admin-defined
+	 * import jobs, never from unauthenticated input.
+	 *
 	 * @param string      $url     Source URL.
 	 * @param int         $timeout HTTP timeout in seconds.
 	 * @param string|null $error   Optional. Set to an error message string on failure.

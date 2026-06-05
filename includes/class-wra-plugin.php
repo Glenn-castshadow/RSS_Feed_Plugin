@@ -16,18 +16,30 @@ class WRA_Plugin {
 	const CRON_HOOK         = 'wra_run_import_jobs';
 
 	/**
-	 * Shared feed fetcher instance (used by block render callback).
+	 * Shared settings repository.
 	 *
-	 * @var WRA_Feed_Fetcher
+	 * @var WRA_Settings_Repository
 	 */
-	private static $fetcher;
+	private static $repo;
 
 	/**
-	 * Shared shortcode instance (used as block render callback).
+	 * Shared shortcode instance (used as block/Elementor render callback).
 	 *
 	 * @var WRA_Shortcode
 	 */
 	private static $shortcode;
+
+	/**
+	 * Lazily create and return the shared settings repository.
+	 *
+	 * @return WRA_Settings_Repository
+	 */
+	public static function repository() {
+		if ( ! self::$repo ) {
+			self::$repo = new WRA_Settings_Repository();
+		}
+		return self::$repo;
+	}
 
 	/**
 	 * Start plugin services.
@@ -35,15 +47,18 @@ class WRA_Plugin {
 	public static function init() {
 		load_plugin_textdomain( 'curated-rss-aggregator', false, dirname( plugin_basename( WRA_PLUGIN_FILE ) ) . '/languages' );
 
-		$settings  = self::get_settings();
-		self::$fetcher = new WRA_Feed_Fetcher();
-		$extractor    = new WRA_Full_Text_Extractor();
-		$ai_rewriter  = ! empty( $settings['ai_api_key'] ) ? new WRA_AI_Rewriter( $settings ) : null;
-		$importer     = new WRA_Importer( self::$fetcher, $extractor, $ai_rewriter );
+		$repo = self::repository();
+		$repo->migrate_inline_logs();
+
+		$settings    = $repo->get_settings();
+		$fetcher     = new WRA_Feed_Fetcher();
+		$extractor   = new WRA_Full_Text_Extractor();
+		$ai_rewriter = ! empty( $settings['ai_api_key'] ) ? new WRA_AI_Rewriter( $settings ) : null;
+		$importer    = new WRA_Importer( $fetcher, $repo, $extractor, $ai_rewriter );
 
 		$post_source     = new WRA_Post_Source();
-		self::$shortcode = new WRA_Shortcode( self::$fetcher, $post_source );
-		new WRA_Admin( self::$fetcher, $importer );
+		self::$shortcode = new WRA_Shortcode( $fetcher, $post_source, $repo );
+		new WRA_Admin( $fetcher, $importer, $repo );
 
 		add_action( 'init', array( __CLASS__, 'register_block' ) );
 		add_action( 'init', array( __CLASS__, 'migrate_cron_schedule' ) );
@@ -129,21 +144,7 @@ class WRA_Plugin {
 		add_filter( 'cron_schedules', array( __CLASS__, 'add_cron_schedules' ) );
 
 		if ( false === get_option( self::SETTINGS_OPTION ) ) {
-			add_option(
-				self::SETTINGS_OPTION,
-				array(
-					'feeds'               => '',
-					'cache_minutes'       => 60,
-					'fallback_image'      => '',
-					'fallback_image_ids'  => '',
-					'affiliate_name'      => '',
-					'affiliate_value' => '',
-					'amazon_tag'      => '',
-					'ai_provider'     => '',
-					'ai_api_key'      => '',
-					'ai_model'        => '',
-				)
-			);
+			add_option( self::SETTINGS_OPTION, WRA_Settings_Repository::DEFAULTS );
 		}
 
 		if ( false === get_option( self::IMPORTS_OPTION ) ) {
@@ -205,69 +206,41 @@ class WRA_Plugin {
 	/**
 	 * Settings with defaults.
 	 *
+	 * @deprecated Prefer the injected WRA_Settings_Repository. Kept as a thin
+	 *             delegator for backward compatibility with external callers.
 	 * @return array
 	 */
 	public static function get_settings() {
-		$defaults = array(
-			'feeds'              => '',
-			'cache_minutes'      => 60,
-			'fallback_image'     => '',
-			'fallback_image_ids' => '',
-			'affiliate_name'     => '',
-			'affiliate_value' => '',
-			'amazon_tag'      => '',
-			'ai_provider'     => '',
-			'ai_api_key'      => '',
-			'ai_model'        => '',
-		);
-
-		return wp_parse_args( get_option( self::SETTINGS_OPTION, array() ), $defaults );
+		return self::repository()->get_settings();
 	}
 
 	/**
 	 * Resolve fallback image attachment IDs to full-size URLs.
 	 *
-	 * Falls back to the legacy single-URL setting when no IDs are saved.
-	 *
+	 * @deprecated Prefer the injected WRA_Settings_Repository.
 	 * @return string[]
 	 */
 	public static function get_fallback_images() {
-		$settings = self::get_settings();
-		$ids      = array_filter( array_map( 'intval', explode( ',', $settings['fallback_image_ids'] ) ) );
-		$urls     = array();
-
-		foreach ( $ids as $id ) {
-			$url = wp_get_attachment_image_url( $id, 'full' );
-			if ( $url ) {
-				$urls[] = $url;
-			}
-		}
-
-		// Backward compat: honour the old single-URL setting if nothing else is set.
-		if ( empty( $urls ) && ! empty( $settings['fallback_image'] ) ) {
-			$urls[] = $settings['fallback_image'];
-		}
-
-		return $urls;
+		return self::repository()->get_fallback_images();
 	}
 
 	/**
 	 * Import jobs.
 	 *
+	 * @deprecated Prefer the injected WRA_Settings_Repository.
 	 * @return array
 	 */
 	public static function get_import_jobs() {
-		$jobs = get_option( self::IMPORTS_OPTION, array() );
-		return is_array( $jobs ) ? $jobs : array();
+		return self::repository()->get_import_jobs();
 	}
 
 	/**
 	 * Named feed lists.
 	 *
+	 * @deprecated Prefer the injected WRA_Settings_Repository.
 	 * @return array Associative array keyed by list slug.
 	 */
 	public static function get_feed_lists() {
-		$lists = get_option( self::FEED_LISTS_OPTION, array() );
-		return is_array( $lists ) ? $lists : array();
+		return self::repository()->get_feed_lists();
 	}
 }

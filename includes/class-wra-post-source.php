@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-class WRA_Post_Source {
+class WRA_Post_Source implements WRA_Item_Source {
 	/**
 	 * Fetch imported posts and return them in the same item shape as WRA_Feed_Fetcher.
 	 *
@@ -85,17 +85,19 @@ class WRA_Post_Source {
 			$image = ! empty( $pool ) ? $pool[ array_rand( $pool ) ] : '';
 		}
 
-		return array(
-			'title'       => get_the_title( $id ),
-			'link'        => get_permalink( $id ),
-			'guid'        => (string) $id,
-			'date'        => get_the_date( get_option( 'date_format' ), $id ),
-			'timestamp'   => (int) get_the_time( 'U', $id ),
-			'author'      => get_the_author_meta( 'display_name', $post->post_author ),
-			'excerpt'     => get_the_excerpt( $post ),
-			'content'     => '',
-			'image'       => esc_url_raw( (string) $image ),
-			'source_feed' => (string) get_post_meta( $id, '_wra_source_feed', true ),
+		return WRA_Item::create(
+			array(
+				'title'       => get_the_title( $id ),
+				'link'        => get_permalink( $id ),
+				'guid'        => (string) $id,
+				'date'        => get_the_date( get_option( 'date_format' ), $id ),
+				'timestamp'   => (int) get_the_time( 'U', $id ),
+				'author'      => get_the_author_meta( 'display_name', $post->post_author ),
+				'excerpt'     => get_the_excerpt( $post ),
+				'content'     => '',
+				'image'       => esc_url_raw( (string) $image ),
+				'source_feed' => (string) get_post_meta( $id, '_wra_source_feed', true ),
+			)
 		);
 	}
 }
