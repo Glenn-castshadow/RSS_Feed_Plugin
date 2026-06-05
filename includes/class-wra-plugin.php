@@ -170,6 +170,7 @@ class WRA_Plugin {
 	 */
 	public static function deactivate() {
 		wp_clear_scheduled_hook( self::CRON_HOOK );
+		wp_clear_scheduled_hook( WRA_Feed_Cache::REFRESH_HOOK );
 	}
 
 	/**

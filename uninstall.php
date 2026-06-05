@@ -19,22 +19,23 @@ delete_option( 'wra_import_jobs' );
 delete_option( 'wra_feed_lists' );
 delete_option( 'wra_job_logs' );
 
-// Scheduled cron event.
+// Scheduled cron events.
 wp_clear_scheduled_hook( 'wra_run_import_jobs' );
+wp_clear_scheduled_hook( 'wra_refresh_feed_items' );
 
 // Post meta added to every imported post.
 delete_post_meta_by_key( '_wra_source_guid' );
 delete_post_meta_by_key( '_wra_source_link' );
 delete_post_meta_by_key( '_wra_source_feed' );
 
-// SimplePie feed transients stored in the options table.
+// SimplePie feed transients and the plugin's stale-while-revalidate item cache.
 global $wpdb;
-$like_val     = $wpdb->esc_like( '_transient_feed_' ) . '%';
-$like_timeout = $wpdb->esc_like( '_transient_timeout_feed_' ) . '%';
 $wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
 	$wpdb->prepare(
-		"DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
-		$like_val,
-		$like_timeout
+		"DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s OR option_name LIKE %s OR option_name LIKE %s",
+		$wpdb->esc_like( '_transient_feed_' ) . '%',
+		$wpdb->esc_like( '_transient_timeout_feed_' ) . '%',
+		$wpdb->esc_like( '_transient_wra_items_' ) . '%',
+		$wpdb->esc_like( '_transient_timeout_wra_items_' ) . '%'
 	)
 );
