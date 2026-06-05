@@ -18,6 +18,10 @@ wp-content/debug.log
 # Dependency folders
 node_modules/
 vendor/
+composer.phar
+
+# Tooling caches
+.phpunit.cache/
 
 # Build output
 dist/
