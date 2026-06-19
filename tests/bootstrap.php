@@ -85,4 +85,5 @@ require_once dirname( __DIR__ ) . '/includes/class-wra-feed-warmer.php';
 require_once dirname( __DIR__ ) . '/includes/class-wra-feed-cache.php';
 require_once dirname( __DIR__ ) . '/includes/class-wra-full-text-extractor.php';
 require_once dirname( __DIR__ ) . '/includes/class-wra-post-source.php';
+require_once dirname( __DIR__ ) . '/includes/class-wra-shortcode.php';
 

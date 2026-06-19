@@ -114,14 +114,7 @@ class WRA_Shortcode {
 			);
 		}
 
-		$feed_source = isset( $params['feeds'] ) ? $params['feeds'] : '';
-		if ( ! empty( $params['feed_list'] ) ) {
-			$lists   = $this->repo->get_feed_lists();
-			$list_id = sanitize_key( $params['feed_list'] );
-			if ( isset( $lists[ $list_id ] ) ) {
-				$feed_source = $lists[ $list_id ]['feeds'];
-			}
-		}
+		$feed_source = self::resolve_feed_source( $params, $this->repo->get_feed_lists() );
 
 		$settings = $this->repo->get_settings();
 
@@ -461,6 +454,27 @@ class WRA_Shortcode {
 			'post_type'        => $atts['post_type'],
 			'post_status'      => $atts['post_status'],
 		);
+	}
+
+	/**
+	 * Resolve the effective feed-source string for a set of params.
+	 *
+	 * A non-empty, known `feed_list` (pool slug) wins over any raw `feeds`
+	 * value; an empty or unknown slug falls back to `feeds`.
+	 *
+	 * @param array $params Display/source params (may contain 'feed_list', 'feeds').
+	 * @param array $lists  Feed lists keyed by slug (WRA_Settings_Repository::get_feed_lists()).
+	 * @return string Newline/comma-separated feed URLs.
+	 */
+	public static function resolve_feed_source( array $params, array $lists ) {
+		$feed_source = isset( $params['feeds'] ) ? $params['feeds'] : '';
+		if ( ! empty( $params['feed_list'] ) ) {
+			$list_id = sanitize_key( $params['feed_list'] );
+			if ( isset( $lists[ $list_id ] ) ) {
+				$feed_source = $lists[ $list_id ]['feeds'];
+			}
+		}
+		return $feed_source;
 	}
 
 	/**
