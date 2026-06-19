@@ -3,7 +3,7 @@ Contributors: castshadow
 Tags: rss, feed, aggregator, news, import
 Requires at least: 6.0
 Tested up to: 6.7
-Stable tag: 1.2.7
+Stable tag: 1.2.8
 Requires PHP: 7.4
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -79,6 +79,9 @@ Use the Export / Import Settings panel (collapsed under the Display Feeds sectio
 4. Frontend grid layout with shadow card style.
 
 == Changelog ==
+
+= 1.2.8 =
+* Feed pool picker: select a saved Feed List from a dropdown in the Gutenberg block and Elementor widget (previously available only via the shortcode feed_list attribute).
 
 = 1.2.7 =
 * Performance: front-end feed display now uses stale-while-revalidate caching — a page serves the cached items instantly and refreshes them in the background on cron, so visitors never wait on a live RSS fetch (covers any feed, including inline shortcode/widget feed lists not in the global settings).

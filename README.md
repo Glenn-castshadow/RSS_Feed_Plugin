@@ -2,7 +2,7 @@
 
 A WordPress plugin for displaying and importing RSS feeds. Show feeds anywhere with a shortcode or Gutenberg block, filter by keyword, limit items per source, and optionally import feed items as WordPress posts — with optional full-text extraction and AI rewrite/summarize.
 
-**Current version:** 1.2.3
+**Current version:** 1.2.8
 
 ---
 
@@ -44,7 +44,7 @@ A WordPress plugin for displaying and importing RSS feeds. Show feeds anywhere w
 
 ### From the zip (recommended)
 
-1. Download `curated-rss-aggregator-1.2.3.zip` from the `dist/` folder or a GitHub release.
+1. Download `curated-rss-aggregator-1.2.8.zip` from the `dist/` folder or a GitHub release.
 2. In WordPress go to **Plugins → Add New → Upload Plugin**.
 3. Upload the zip and click **Install Now**, then **Activate**.
 4. Open **RSS Aggregator** in the WordPress admin sidebar.
@@ -61,10 +61,10 @@ A WordPress plugin for displaying and importing RSS feeds. Show feeds anywhere w
 From the repository root on Windows (PowerShell):
 
 ```powershell
-.\scripts\build-plugin.ps1 -Version "1.2.3"
+.\scripts\build-plugin.ps1 -Version "1.2.8"
 ```
 
-The zip is written to `dist/curated-rss-aggregator-1.2.3.zip`.
+The zip is written to `dist/curated-rss-aggregator-1.2.8.zip`.
 Omit `-Version` to produce `dist/curated-rss-aggregator.zip`.
 
 > **Note:** The build script uses .NET's `ZipArchive` directly to ensure zip entry paths use forward slashes. PowerShell's `Compress-Archive` writes Windows backslashes, which breaks PHP's `ZipArchive` extraction on Linux servers.
@@ -128,7 +128,7 @@ https://example.org/rss"
 
 Search for **Curated RSS Feed** in the block inserter (Widgets category). All shortcode attributes are available as block sidebar controls organised into four panels:
 
-- **Feed Settings** — URLs, item count, per-feed cap
+- **Feed Settings** — feed pool (saved Feed List) or URLs, item count, per-feed cap
 - **Style** — layout, columns, card style, image ratio
 - **Display** — image, date, source, author, excerpt, max chars, read-more
 - **Keyword Filters** — include / exclude terms
@@ -141,7 +141,7 @@ The block renders server-side, so the editor preview reflects live feed data.
 
 Search for **Curated RSS Feed** in the Elementor panel (General category). The widget exposes the same four control sections as the Gutenberg block:
 
-- **Feed Settings** — URLs, item count, per-feed cap
+- **Feed Settings** — feed pool (saved Feed List) or URLs, item count, per-feed cap
 - **Style** — layout, columns, card style, image ratio
 - **Display** — image, date, source, author, excerpt, max chars, read-more
 - **Keyword Filters** — include / exclude terms
