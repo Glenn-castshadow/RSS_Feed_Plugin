@@ -124,6 +124,17 @@ class WRA_Plugin {
 			true
 		);
 
+		$feed_list_options = array();
+		foreach ( self::get_feed_lists() as $list ) {
+			if ( ! empty( $list['id'] ) ) {
+				$feed_list_options[] = array(
+					'value' => (string) $list['id'],
+					'label' => isset( $list['name'] ) && '' !== $list['name'] ? (string) $list['name'] : (string) $list['id'],
+				);
+			}
+		}
+		wp_localize_script( 'wra-block-editor', 'wraFeedLists', $feed_list_options );
+
 		wp_register_style(
 			'wra-public-block',
 			WRA_PLUGIN_URL . 'assets/css/public.css',
