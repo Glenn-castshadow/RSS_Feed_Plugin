@@ -42,6 +42,25 @@ class WRA_Elementor_Widget extends \Elementor\Widget_Base {
 			array( 'label' => __( 'Feed Settings', 'curated-rss-aggregator' ) )
 		);
 
+		$feed_list_options = array( '' => __( '— Use URLs below —', 'curated-rss-aggregator' ) );
+		foreach ( WRA_Plugin::get_feed_lists() as $list ) {
+			if ( ! empty( $list['id'] ) ) {
+				$label = isset( $list['name'] ) && '' !== $list['name'] ? $list['name'] : $list['id'];
+				$feed_list_options[ (string) $list['id'] ] = $label;
+			}
+		}
+
+		$this->add_control(
+			'feed_list',
+			array(
+				'label'       => __( 'Feed pool', 'curated-rss-aggregator' ),
+				'type'        => \Elementor\Controls_Manager::SELECT,
+				'default'     => '',
+				'options'     => $feed_list_options,
+				'description' => __( 'Pick a saved Feed List, or leave unset to enter URLs below.', 'curated-rss-aggregator' ),
+			)
+		);
+
 		$this->add_control(
 			'feeds',
 			array(
@@ -49,6 +68,7 @@ class WRA_Elementor_Widget extends \Elementor\Widget_Base {
 				'type'        => \Elementor\Controls_Manager::TEXTAREA,
 				'rows'        => 4,
 				'description' => __( 'Leave blank to use the plugin default feeds.', 'curated-rss-aggregator' ),
+				'condition'   => array( 'feed_list' => '' ),
 			)
 		);
 
