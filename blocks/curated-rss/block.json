@@ -2,12 +2,16 @@
 	"$schema": "https://schemas.wp.org/trunk/block.json",
 	"apiVersion": 3,
 	"name": "curated-rss-aggregator/feed",
-	"version": "0.6.0",
+	"version": "0.7.0",
 	"title": "Curated RSS Feed",
 	"category": "widgets",
 	"description": "Display RSS feed items with configurable layout, styling, and filters.",
 	"textdomain": "curated-rss-aggregator",
 	"attributes": {
+		"feed_list": {
+			"type": "string",
+			"default": ""
+		},
 		"feeds": {
 			"type": "string",
 			"default": ""

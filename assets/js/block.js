@@ -29,7 +29,15 @@
 							title: __( 'Feed Settings', 'curated-rss-aggregator' ),
 							initialOpen: true,
 						},
-						el( TextareaControl, {
+						el( SelectControl, {
+							label: __( 'Feed pool', 'curated-rss-aggregator' ),
+							value: atts.feed_list,
+							options: [ { label: __( '— Use URLs below —', 'curated-rss-aggregator' ), value: '' } ]
+								.concat( window.wraFeedLists || [] ),
+							onChange: function ( v ) { set( { feed_list: v } ); },
+							help: __( 'Pick a saved Feed List, or leave unset to enter URLs directly.', 'curated-rss-aggregator' ),
+						} ),
+						! atts.feed_list && el( TextareaControl, {
 							label: __( 'Feed URLs (one per line)', 'curated-rss-aggregator' ),
 							value: atts.feeds,
 							onChange: function ( v ) { set( { feeds: v } ); },
